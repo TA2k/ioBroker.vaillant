@@ -17,11 +17,13 @@ Vaillant multiMatic VR900/VR920 Adapter
 
 ### Getting started
 
+Change objects in the folders configuration. Some configuration will only work when the mode is in ON or MANUAL
+
 ## Changelog
 
 ### 0.0.1
 
--   (TA2k) initial release
+- (TA2k) initial release
 
 ## License
 
