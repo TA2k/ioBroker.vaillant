@@ -1,0 +1,59 @@
+{
+  "name": "iobroker.vaillant",
+  "version": "0.0.1",
+  "description": "Vaillant multiMatic VR900/VR920 Adapter",
+  "author": {
+    "name": "TA2k",
+    "email": "tombox2020@gmail.com"
+  },
+  "homepage": "https://github.com/TA2k/ioBroker.vaillant",
+  "license": "MIT",
+  "keywords": [
+    "vaillant",
+    "multiMATIC",
+    "VR900",
+    "VR920"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TA2k/ioBroker.vaillant"
+  },
+  "dependencies": {
+    "@iobroker/adapter-core": "^2.1.0",
+    "request": "^2.88.0",
+    "traverse": "^0.6.6"
+  },
+  "devDependencies": {
+    "@iobroker/testing": "^2.0.1",
+    "@types/chai": "^4.2.7",
+    "@types/chai-as-promised": "^7.1.2",
+    "@types/gulp": "^4.0.6",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^10.17.13",
+    "@types/proxyquire": "^1.3.28",
+    "@types/sinon": "^7.5.1",
+    "@types/sinon-chai": "^3.2.3",
+    "axios": "^0.19.1",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "eslint": "^6.8.0",
+    "gulp": "^4.0.2",
+    "mocha": "^7.0.0",
+    "proxyquire": "^2.1.3",
+    "sinon": "^8.1.0",
+    "sinon-chai": "^3.4.0"
+  },
+  "main": "main.js",
+  "scripts": {
+    "test:js": "mocha --opts test/mocha.custom.opts",
+    "test:package": "mocha test/package --exit",
+    "test:unit": "mocha test/unit --exit",
+    "test:integration": "mocha test/integration --exit",
+    "test": "npm run test:js && npm run test:package",
+    "lint": "eslint"
+  },
+  "bugs": {
+    "url": "https://github.com/TA2k/ioBroker.vaillant/issues"
+  },
+  "readmeFilename": "README.md"
+}

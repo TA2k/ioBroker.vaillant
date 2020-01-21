@@ -1,0 +1,100 @@
+{
+    "common": {
+        "name": "vaillant",
+        "version": "0.0.1",
+        "news": {
+            "0.0.1": {
+                "en": "initial release",
+                "de": "Erstveröffentlichung",
+                "ru": "Начальная версия",
+                "pt": "lançamento inicial",
+                "nl": "Eerste uitgave",
+                "fr": "Première version",
+                "it": "Versione iniziale",
+                "es": "Versión inicial",
+                "pl": "Pierwsze wydanie",
+                "zh-cn": "首次出版"
+            }
+        },
+        "title": "Vaillant multiMATIC",
+        "titleLang": {
+            "en": "Vaillant multiMATIC",
+            "de": "Vaillant multiMATIC",
+            "ru": "Vaillant multiMATIC",
+            "pt": "Vaillant multiMATIC",
+            "nl": "Vaillant multiMATIC",
+            "fr": "Vaillant multiMATIC",
+            "it": "Vaillant multiMATIC",
+            "es": "Vaillant multiMATIC",
+            "pl": "Vaillant multiMATIC",
+            "zh-cn": "万能multiMATIC"
+        },
+        "desc": {
+            "en": "Vaillant multiMatic VR900/VR920 Adapter",
+            "de": "Vaillant multiMatic VR900 / VR920 Adapter",
+            "ru": "Адаптер Vaillant multiMatic VR900 / VR920",
+            "pt": "Adaptador Vaillant multiMatic VR900 / VR920",
+            "nl": "Vaillant multiMatic VR900 / VR920-adapter",
+            "fr": "Adaptateur Vaillant multiMatic VR900 / VR920",
+            "it": "Vaillant multiMatic VR900 / VR920 Adapter",
+            "es": "Adaptador Vaillant multiMatic VR900 / VR920",
+            "pl": "Adapter Vaillant multiMatic VR900 / VR920",
+            "zh-cn": "Vaillant multiMatic VR900 / VR920适配器"
+        },
+        "authors": [
+            "TA2k <tombox2020@gmail.com>"
+        ],
+        "keywords": [
+            "vaillant",
+            "multiMATIC",
+            "VR900",
+            "VR920"
+        ],
+        "license": "MIT",
+        "platform": "Javascript/Node.js",
+        "main": "main.js",
+        "icon": "vaillant.png",
+        "enabled": true,
+        "extIcon": "https://raw.githubusercontent.com/TA2k/ioBroker.vaillant/master/admin/vaillant.png",
+        "readme": "https://github.com/TA2k/ioBroker.vaillant/blob/master/README.md",
+        "loglevel": "info",
+        "mode": "daemon",
+        "type": "climate-control",
+        "compact": true,
+        "materialize": true,
+        "dependencies": [
+            {
+                "js-controller": ">=1.4.2"
+            }
+        ]
+    },
+    "native": {
+        "user": "",
+        "password": "",
+        "interval": 5
+    },
+    "objects": [],
+    "instanceObjects": [
+        {
+            "_id": "info",
+            "type": "channel",
+            "common": {
+                "name": "Information"
+            },
+            "native": {}
+        },
+        {
+            "_id": "info.connection",
+            "type": "state",
+            "common": {
+                "role": "indicator.connected",
+                "name": "Device or service connected",
+                "type": "boolean",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        }
+    ]
+}
