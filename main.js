@@ -164,6 +164,9 @@ class Vaillant extends utils.Adapter {
                     this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine")
                         .then(() => {})
                         .catch(() => {});
+                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
+                        .then(() => {})
+                        .catch(() => {});
 
                     this.updateInterval = setInterval(() => {
                         this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol")
@@ -173,6 +176,9 @@ class Vaillant extends utils.Adapter {
                             .then(() => {})
                             .catch(() => {});
                         this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine")
+                            .then(() => {})
+                            .catch(() => {});
+                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
                             .then(() => {})
                             .catch(() => {});
                     }, this.config.interval * 60 * 1000);
@@ -213,31 +219,10 @@ class Vaillant extends utils.Adapter {
                     }
                     this.atoken = body.body.authToken;
                     try {
-                        const authBody = {
-                            authToken: this.atoken,
-                            smartphoneId: this.smartPhoneId,
-                            username: this.config.user
-                        };
-                        request.post(
-                            {
-                                url: "https://smart.vaillant.com/mobile/api/v4/account/authentication/v1/authenticate",
-                                headers: this.baseHeader,
-                                followAllRedirects: true,
-                                body: authBody,
-                                jar: this.jar,
-                                json: true
-                            },
-                            (err, resp, body) => {
-                                if (err || (resp && resp.statusCode >= 400)) {
-                                    this.log.error(err);
-                                    this.log.debug(body);
-                                    reject();
-                                    return;
-                                }
-                                this.log.debug(body);
-                                resolve();
-                            }
-                        );
+                        this.authenticate(reject, resolve);
+                        this.updateInterval = setInterval(() => {
+                            this.authenticate();
+                        }, 60 * 60 * 1000); //60min;
                     } catch (error) {
                         this.log.error(error);
                         this.log.error(error.stack);
@@ -247,6 +232,38 @@ class Vaillant extends utils.Adapter {
             );
         });
     }
+    authenticate(reject, resolve) {
+        const authBody = {
+            authToken: this.atoken,
+            smartphoneId: this.smartPhoneId,
+            username: this.config.user
+        };
+        request.post(
+            {
+                url: "https://smart.vaillant.com/mobile/api/v4/account/authentication/v1/authenticate",
+                headers: this.baseHeader,
+                followAllRedirects: true,
+                body: authBody,
+                jar: this.jar,
+                json: true
+            },
+            (err, resp, body) => {
+                if (err || (resp && resp.statusCode >= 400)) {
+                    this.log.error(err);
+                    this.log.debug(body);
+                    if (reject) {
+                        reject();
+                    }
+                    return;
+                }
+                this.log.debug(body);
+                if (resolve) {
+                    resolve();
+                }
+            }
+        );
+    }
+
     getFacility() {
         return new Promise((resolve, reject) => {
             request.get(
@@ -363,12 +380,24 @@ class Vaillant extends utils.Adapter {
                                         while (stringPathIndex.length < 2) stringPathIndex = "0" + stringPathIndex;
                                         const key = this.path[pathIndex - 1] + stringPathIndex;
                                         const parentIndex = modPath.indexOf(pathElement) - 1;
-                                        //if (this.key === pathElement) {
                                         modPath[parentIndex] = key;
-                                        //}
                                         modPath.splice(parentIndex + 1, 1);
                                     }
                                 });
+                                if (path === "systemcontrol" && modPath[0].indexOf("parameters") !== -1 && modPath[1] === "name") {
+                                    //add value field for parameters
+                                    adapter.setObjectNotExists(adapter.serialNr + "." + path + "." + modPath[0] + ".parameterValue", {
+                                        type: "state",
+                                        common: {
+                                            name: "Value for " + value + ". See definition for values.",
+                                            role: "indicator",
+                                            type: "mixed",
+                                            write: true,
+                                            read: true
+                                        },
+                                        native: {}
+                                    });
+                                }
                                 adapter.setObjectNotExists(adapter.serialNr + "." + path + "." + modPath.join("."), {
                                     type: "state",
                                     common: {
@@ -401,17 +430,29 @@ class Vaillant extends utils.Adapter {
                 .split(".")
                 .splice(2)
                 .slice(0, 3);
-            const idState = await this.getStateAsync(idPath.join(".") + "._id");
-
-            let path = idArray.splice(4);
-            if (idState && idState.val) {
-                path.splice(1, 0, idState.val);
-            }
-            path[0] = path[0].replace(/[0-9]/g, "");
-            path = path.join("/");
-            const url = "https://smart.vaillant.com/mobile/api/v4/facilities/" + this.serialNr + "/systemcontrol/v1/" + path;
+            let path = [];
+            let url = "";
             const body = {};
-            body[action] = val;
+            if (id.indexOf("configuration") !== -1) {
+                const idState = await this.getStateAsync(idPath.join(".") + "._id");
+                path = idArray.splice(4);
+                if (idState && idState.val) {
+                    path.splice(1, 0, idState.val);
+                }
+                path[0] = path[0].replace(/[0-9]/g, "");
+                path = path.join("/");
+                url = "https://smart.vaillant.com/mobile/api/v4/facilities/" + this.serialNr + "/systemcontrol/v1/" + path;
+                body[action] = val;
+            } else {
+                const pathState = await this.getStateAsync(idPath.join(".") + ".link.resourceLink");
+                if (pathState) {
+                    url = "https://smart.vaillant.com/mobile/api/v4" + pathState.val;
+                    const action = pathState.val.split("/").pop();
+                    const subBody = {};
+                    subBody[action] = val;
+                    body[action] = subBody;
+                }
+            }
 
             request.put(
                 {
@@ -464,7 +505,7 @@ class Vaillant extends utils.Adapter {
     onStateChange(id, state) {
         if (state) {
             if (!state.ack) {
-                if (id.indexOf("configuration") !== -1) {
+                if (id.indexOf("configuration") !== -1 || id.indexOf("parameterValue") !== -1) {
                     this.setMethod(id, state.val);
                 }
             }
