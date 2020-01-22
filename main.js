@@ -222,7 +222,7 @@ class Vaillant extends utils.Adapter {
                         this.authenticate(reject, resolve);
                         this.updateInterval = setInterval(() => {
                             this.authenticate();
-                        }, 45 * 60 * 1000); //45min;
+                        }, 10 * 60 * 1000); //10min;
                     } catch (error) {
                         this.log.error(error);
                         this.log.error(error.stack);
