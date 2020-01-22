@@ -213,7 +213,7 @@ class Vaillant extends utils.Adapter {
                     if (err || (resp && resp.statusCode >= 400) || !body) {
                         this.log.error(err);
                         this.log.error(resp.statusCode);
-                        this.log.error(body);
+                        this.log.error(JSON.stringify(body));
                         reject();
                         return;
                     }
@@ -422,6 +422,11 @@ class Vaillant extends utils.Adapter {
                                         },
                                         native: {}
                                     });
+                                }
+                                if (path === "emf") {
+                                    if (modPath[0].indexOf("reports") !== -1) {
+                                        modPath[0] = this.parent.node.function + "_" + this.parent.node.energyType;
+                                    }
                                 }
                                 adapter.setObjectNotExists(adapter.serialNr + "." + path + "." + modPath.join("."), {
                                     type: "state",
