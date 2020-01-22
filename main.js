@@ -206,8 +206,10 @@ class Vaillant extends utils.Adapter {
                     gzip: true
                 },
                 (err, resp, body) => {
-                    if (err || resp.statusCode >= 400 || !body) {
+                    if (err || (resp && resp.statusCode >= 400) || !body) {
                         this.log.error(err);
+                        this.log.error(resp.statusCode);
+                        this.log.error(body);
                         reject();
                         return;
                     }
@@ -250,7 +252,8 @@ class Vaillant extends utils.Adapter {
             (err, resp, body) => {
                 if (err || (resp && resp.statusCode >= 400)) {
                     this.log.error(err);
-                    this.log.debug(body);
+                    this.log.error(resp.statusCode);
+                    this.log.error(body);
                     if (reject) {
                         reject();
                     }
