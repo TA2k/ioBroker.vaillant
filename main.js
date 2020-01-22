@@ -152,23 +152,10 @@ class Vaillant extends utils.Adapter {
                 this.log.debug("Login successful");
                 this.setState("info.connection", true, true);
                 this.getFacility().then(() => {
-                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status")
-                        .then(() => {})
-                        .catch(() => {});
-                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol")
-                        .then(() => {})
-                        .catch(() => {});
-                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport")
-                        .then(() => {})
-                        .catch(() => {});
-                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine")
-                        .then(() => {})
-                        .catch(() => {});
-                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
-                        .then(() => {})
-                        .catch(() => {});
-
-                    this.updateInterval = setInterval(() => {
+                    this.cleanConfigurations().then(() => {
+                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status")
+                            .then(() => {})
+                            .catch(() => {});
                         this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol")
                             .then(() => {})
                             .catch(() => {});
@@ -181,6 +168,23 @@ class Vaillant extends utils.Adapter {
                         this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
                             .then(() => {})
                             .catch(() => {});
+                    });
+
+                    this.updateInterval = setInterval(() => {
+                        this.cleanConfigurations().then(() => {
+                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol")
+                                .then(() => {})
+                                .catch(() => {});
+                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport")
+                                .then(() => {})
+                                .catch(() => {});
+                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine")
+                                .then(() => {})
+                                .catch(() => {});
+                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
+                                .then(() => {})
+                                .catch(() => {});
+                        });
                     }, this.config.interval * 60 * 1000);
                 });
             })
@@ -266,7 +270,25 @@ class Vaillant extends utils.Adapter {
             }
         );
     }
-
+    cleanConfigurations() {
+        return new Promise(resolve => {
+            const pre = this.name + "." + this.instance;
+            this.getStates(pre + ".*", (err, states) => {
+                const allIds = Object.keys(states);
+                allIds.forEach(async keyName => {
+                    if (keyName.indexOf(".configuration") !== -1) {
+                        await this.delObjectAsync(
+                            keyName
+                                .split(".")
+                                .slice(2)
+                                .join(".")
+                        );
+                    }
+                });
+                resolve();
+            });
+        });
+    }
     getFacility() {
         return new Promise((resolve, reject) => {
             request.get(
