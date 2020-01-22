@@ -409,6 +409,12 @@ class Vaillant extends utils.Adapter {
                                         modPath.splice(parentIndex + 1, 1);
                                     }
                                 });
+                                if (path === "systemcontrol") {
+                                    if (modPath[0].indexOf("parameters") !== -1) {
+                                        const name = this.parent.node.name || this.parent.parent.node.name || this.parent.parent.parent.node.name;
+                                        modPath[0] = "parameters_" + name.replace(/ /g, "_");
+                                    }
+                                }
                                 if (path === "systemcontrol" && modPath[0].indexOf("parameters") !== -1 && modPath[1] === "name") {
                                     //add value field for parameters
                                     adapter.setObjectNotExists(adapter.serialNr + "." + path + "." + modPath[0] + ".parameterValue", {
@@ -428,6 +434,7 @@ class Vaillant extends utils.Adapter {
                                         modPath[0] = this.parent.node.function + "_" + this.parent.node.energyType;
                                     }
                                 }
+
                                 adapter.setObjectNotExists(adapter.serialNr + "." + path + "." + modPath.join("."), {
                                     type: "state",
                                     common: {
