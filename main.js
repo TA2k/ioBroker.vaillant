@@ -409,12 +409,7 @@ class Vaillant extends utils.Adapter {
                                         modPath.splice(parentIndex + 1, 1);
                                     }
                                 });
-                                if (path === "systemcontrol") {
-                                    if (modPath[0].indexOf("parameters") !== -1) {
-                                        const name = this.parent.node.name || this.parent.parent.node.name || this.parent.parent.parent.node.name;
-                                        modPath[0] = "parameters_" + name.replace(/ /g, "_");
-                                    }
-                                }
+
                                 if (path === "systemcontrol" && modPath[0].indexOf("parameters") !== -1 && modPath[1] === "name") {
                                     //add value field for parameters
                                     adapter.setObjectNotExists(adapter.serialNr + "." + path + "." + modPath[0] + ".parameterValue", {
@@ -447,6 +442,33 @@ class Vaillant extends utils.Adapter {
                                     native: {}
                                 });
                                 adapter.setState(adapter.serialNr + "." + path + "." + modPath.join("."), value, true);
+                            } else if (path === "systemcontrol" && this.path.length > 0 && !isNaN(this.path[this.path.length - 1])) {
+                                const modPath = this.path;
+                                this.path.forEach((pathElement, pathIndex) => {
+                                    if (!isNaN(parseInt(pathElement))) {
+                                        let stringPathIndex = parseInt(pathElement) + 1 + "";
+                                        while (stringPathIndex.length < 2) stringPathIndex = "0" + stringPathIndex;
+                                        const key = this.path[pathIndex - 1] + stringPathIndex;
+                                        const parentIndex = modPath.indexOf(pathElement) - 1;
+                                        modPath[parentIndex] = key;
+
+                                        modPath.splice(parentIndex + 1, 1);
+                                    }
+                                });
+
+                                if (this.node.name) {
+                                    adapter.setObjectNotExists(adapter.serialNr + "." + path + "." + modPath.join("."), {
+                                        type: "state",
+                                        common: {
+                                            name: this.node.name,
+                                            role: "indicator",
+                                            type: "mixed",
+                                            write: false,
+                                            read: true
+                                        },
+                                        native: {}
+                                    });
+                                }
                             }
                         });
                         resolve();
