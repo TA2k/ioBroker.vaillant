@@ -127,6 +127,7 @@ class Vaillant extends utils.Adapter {
 
         this.jar = request.jar();
         this.updateInterval = null;
+        this.reauthInterval = null;
         this.isRelogin = false;
         this.baseHeader = {
             "Vaillant-Mobile-App": "multiMATIC v2.1.45 b389 (Android)",
@@ -232,12 +233,9 @@ class Vaillant extends utils.Adapter {
                     this.atoken = body.body.authToken;
                     try {
                         this.authenticate(reject, resolve);
-                        this.updateInterval = setInterval(() => {
-                            this.authenticate();
-                        }, 10 * 60 * 1000); //10min;
-                        this.updateInterval = setInterval(() => {
+                        this.reauthInterval = setInterval(() => {
                             this.login();
-                        }, 2 * 60 * 60 * 1000); //4h;
+                        }, 4 * 60 * 60 * 1000); //4h;
                     } catch (error) {
                         this.log.error(error);
                         this.log.error(error.stack);
@@ -264,24 +262,11 @@ class Vaillant extends utils.Adapter {
             },
             (err, resp, body) => {
                 if (err || (resp && resp.statusCode >= 400)) {
-                    if (resp.statusCode === 401) {
-                        this.setState("info.connection", false, true);
-                        this.log.info(JSON.stringify(body));
-                        if (!this.isRelogin) {
-                            this.log.info("401 Reauth Error try to relogin.");
-                            this.isRelogin = true;
-                            setTimeout(() => {
-                                this.login().then(() => {});
-                            }, 15000 );
-                        }
-                    } else {
-                        this.log.error(JSON.stringify(err));
-                        this.log.error(resp.statusCode);
-                        this.log.error(JSON.stringify(body));
-                        if (reject) {
-                            reject();
-                        }
-                    }
+                    this.setState("info.connection", false, true);
+                    err && this.log.error(JSON.stringify(err));
+                    resp && this.log.error(resp.statusCode);
+                    body && this.log.error(JSON.stringify(body));
+                    reject();
                     return;
                 }
                 this.log.debug(JSON.stringify(body));
@@ -409,10 +394,8 @@ class Vaillant extends utils.Adapter {
                         return;
                     }
                     if (err || (resp && resp.statusCode >= 400)) {
-
                         this.setState("info.connection", false, true);
                         if (resp.statusCode === 401) {
-                            
                             this.log.info(JSON.stringify(body));
                             if (!this.isRelogin) {
                                 this.log.info("401 Error try to relogin.");
@@ -420,15 +403,16 @@ class Vaillant extends utils.Adapter {
                                 setTimeout(() => {
                                     this.isRelogin = true;
                                     this.login().then(() => {
+                                        this.setState("info.connection", true, true);
                                         this.updateValues();
                                     });
                                 }, 15000 );
                             }
                         
                         } else {
-                            this.log.error(err);
-                            this.log.error(resp && resp.statusCode);
-                            this.log.error(JSON.stringify(body));
+                            err && this.log.error(err);
+                            resp && this.log.error(resp && resp.statusCode);
+                            body && this.log.error(JSON.stringify(body));
                             this.log.error(path);
                             reject();
                         }
@@ -592,6 +576,7 @@ class Vaillant extends utils.Adapter {
         try {
             this.log.info("cleaned everything up...");
             clearInterval(this.updateInterval);
+            clearInterval(this.reauthInterval);
             callback();
         } catch (e) {
             callback();
