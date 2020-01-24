@@ -265,9 +265,15 @@ class Vaillant extends utils.Adapter {
             (err, resp, body) => {
                 if (err || (resp && resp.statusCode >= 400)) {
                     if (resp.statusCode === 401) {
-                        this.log.info("401 Reauth Error try to relogin.");
-                        this.isRelogin = true;
-                        this.login().then(() => {});
+                        this.setState("info.connection", false, true);
+                        this.log.info(JSON.stringify(body));
+                        if (!this.isRelogin) {
+                            this.log.info("401 Reauth Error try to relogin.");
+                            this.isRelogin = true;
+                            setTimeout(() => {
+                                this.login().then(() => {});
+                            }, 15000 );
+                        }
                     } else {
                         this.log.error(JSON.stringify(err));
                         this.log.error(resp.statusCode);
@@ -403,12 +409,22 @@ class Vaillant extends utils.Adapter {
                         return;
                     }
                     if (err || (resp && resp.statusCode >= 400)) {
+
+                        this.setState("info.connection", false, true);
                         if (resp.statusCode === 401) {
-                            this.log.info("401 Error try to relogin.");
-                            this.isRelogin = true;
-                            this.login().then(() => {
-                                this.updateValues();
-                            });
+                            
+                            this.log.info(JSON.stringify(body));
+                            if (!this.isRelogin) {
+                                this.log.info("401 Error try to relogin.");
+                                this.isRelogin = true;
+                                setTimeout(() => {
+                                    this.isRelogin = true;
+                                    this.login().then(() => {
+                                        this.updateValues();
+                                    });
+                                }, 15000 );
+                            }
+                        
                         } else {
                             this.log.error(err);
                             this.log.error(resp && resp.statusCode);
