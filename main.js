@@ -278,7 +278,7 @@ class Vaillant extends utils.Adapter {
                     }
                     return;
                 }
-                this.log.debug(body);
+                this.log.debug(JSON.stringify(body));
                 if (resolve) {
                     resolve();
                 }
