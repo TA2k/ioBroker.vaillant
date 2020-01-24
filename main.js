@@ -395,7 +395,7 @@ class Vaillant extends utils.Adapter {
                     }
                     if (err || (resp && resp.statusCode >= 400)) {
                         this.setState("info.connection", false, true);
-                        if (resp.statusCode === 401) {
+                        if (resp && resp.statusCode === 401) {
                             this.log.info(JSON.stringify(body));
                             if (!this.isRelogin) {
                                 this.log.info("401 Error try to relogin.");
@@ -406,9 +406,8 @@ class Vaillant extends utils.Adapter {
                                         this.setState("info.connection", true, true);
                                         this.updateValues();
                                     });
-                                }, 10000 );
+                                }, 10000);
                             }
-                        
                         } else {
                             err && this.log.error(err);
                             resp && this.log.error(resp && resp.statusCode);
