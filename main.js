@@ -127,6 +127,7 @@ class Vaillant extends utils.Adapter {
 
         this.jar = request.jar();
         this.updateInterval = null;
+        this.isRelogin = false;
         this.baseHeader = {
             "Vaillant-Mobile-App": "multiMATIC v2.1.45 b389 (Android)",
             "User-Agent": "okhttp/3.10.0",
@@ -171,20 +172,7 @@ class Vaillant extends utils.Adapter {
                     });
 
                     this.updateInterval = setInterval(() => {
-                        this.cleanConfigurations().then(() => {
-                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol")
-                                .then(() => {})
-                                .catch(() => {});
-                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport")
-                                .then(() => {})
-                                .catch(() => {});
-                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine")
-                                .then(() => {})
-                                .catch(() => {});
-                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
-                                .then(() => {})
-                                .catch(() => {});
-                        });
+                        this.updateValues();
                     }, this.config.interval * 60 * 1000);
                 });
             })
@@ -194,6 +182,23 @@ class Vaillant extends utils.Adapter {
 
         // in this template all states changes inside the adapters namespace are subscribed
         this.subscribeStates("*");
+    }
+
+    updateValues() {
+        this.cleanConfigurations().then(() => {
+            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol")
+                .then(() => {})
+                .catch(() => {});
+            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport")
+                .then(() => {})
+                .catch(() => {});
+            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine")
+                .then(() => {})
+                .catch(() => {});
+            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
+                .then(() => {})
+                .catch(() => {});
+        });
     }
 
     login() {
@@ -210,10 +215,11 @@ class Vaillant extends utils.Adapter {
                     gzip: true
                 },
                 (err, resp, body) => {
+                    this.isRelogin = false;
                     if (err || (resp && resp.statusCode >= 400) || !body) {
                         this.log.error(err);
-                        this.log.error(resp.statusCode);
                         this.log.error(JSON.stringify(body));
+                        this.log.error(resp.statusCode);
                         reject();
                         return;
                     }
@@ -231,7 +237,7 @@ class Vaillant extends utils.Adapter {
                         }, 10 * 60 * 1000); //10min;
                         this.updateInterval = setInterval(() => {
                             this.login();
-                        }, 4 * 60 * 60 * 1000); //4h;
+                        }, 2 * 60 * 60 * 1000); //4h;
                     } catch (error) {
                         this.log.error(error);
                         this.log.error(error.stack);
@@ -258,11 +264,17 @@ class Vaillant extends utils.Adapter {
             },
             (err, resp, body) => {
                 if (err || (resp && resp.statusCode >= 400)) {
-                    this.log.error(err);
-                    this.log.error(resp.statusCode);
-                    this.log.error(body);
-                    if (reject) {
-                        reject();
+                    if (resp.statusCode === 401) {
+                        this.log.info("401 Error try to relogin.");
+                        this.isRelogin = true;
+                        this.login().then(() => {});
+                    } else {
+                        this.log.error(JSON.stringify(err));
+                        this.log.error(resp.statusCode);
+                        this.log.error(JSON.stringify(body));
+                        if (reject) {
+                            reject();
+                        }
                     }
                     return;
                 }
@@ -368,6 +380,9 @@ class Vaillant extends utils.Adapter {
     }
     getMethod(url, path) {
         return new Promise((resolve, reject) => {
+            if (this.isRelogin) {
+                return;
+            }
             this.log.debug("Get " + path);
 
             url = url.replace("/$serial/", "/" + this.serialNr + "/");
@@ -388,11 +403,19 @@ class Vaillant extends utils.Adapter {
                         return;
                     }
                     if (err || (resp && resp.statusCode >= 400)) {
-                        this.log.error(err);
-                        this.log.error(resp && resp.statusCode);
-                        this.log.error(JSON.stringify(body));
-                        this.log.error(path);
-                        reject();
+                        if (resp.statusCode === 401) {
+                            this.log.info("401 Error try to relogin.");
+                            this.isRelogin = true;
+                            this.login().then(() => {
+                                this.updateValues();
+                            });
+                        } else {
+                            this.log.error(err);
+                            this.log.error(resp && resp.statusCode);
+                            this.log.error(JSON.stringify(body));
+                            this.log.error(path);
+                            reject();
+                        }
                         return;
                     }
                     this.log.debug(JSON.stringify(body));
