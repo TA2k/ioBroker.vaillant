@@ -265,7 +265,7 @@ class Vaillant extends utils.Adapter {
             (err, resp, body) => {
                 if (err || (resp && resp.statusCode >= 400)) {
                     if (resp.statusCode === 401) {
-                        this.log.info("401 Error try to relogin.");
+                        this.log.info("401 Reauth Error try to relogin.");
                         this.isRelogin = true;
                         this.login().then(() => {});
                     } else {
