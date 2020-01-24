@@ -406,7 +406,7 @@ class Vaillant extends utils.Adapter {
                                         this.setState("info.connection", true, true);
                                         this.updateValues();
                                     });
-                                }, 15000 );
+                                }, 10000 );
                             }
                         
                         } else {
