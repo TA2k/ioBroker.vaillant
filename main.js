@@ -138,6 +138,7 @@ class Vaillant extends utils.Adapter {
         this.atoken = "";
         this.serialNr = "";
         this.smartPhoneId = this.makeid();
+        this.isSpineActive = true;
         // "multimatic_xaTaFEDoEPgAXO0HmFSMeCr5kOT6LqZoQh4LTivdW4b8HncRlKJLtExwNqjaBY1ZPnYGZPGt60NNjim0zk6tl6imL77WZ2eSdEFatxlNFT5hZkdloAL8lstiBxjqNlr5pygs9JNrlcJoTrrX0sPoqLCgE7RTn35Ok77vfX9PA3T5sa3Eqph42wz9nWaZSlcC5UsbC1ooay";
     }
 
@@ -155,10 +156,14 @@ class Vaillant extends utils.Adapter {
                 this.setState("info.connection", true, true);
                 this.getFacility().then(() => {
                     this.cleanConfigurations().then(() => {
-                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").finally(() => {
-                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").finally(() => {
-                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport").finally(() => {
-                                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine").finally(() => {
+                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").finally(async () => {
+                            await this.sleep(10000);
+                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").finally(async () => {
+                                await this.sleep(10000);
+                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport").finally(async () => {
+                                    await this.sleep(10000);
+                                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine").finally(async () => {
+                                        await this.sleep(10000);
                                         this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf").finally(() => {});
                                     });
                                 });
@@ -181,10 +186,14 @@ class Vaillant extends utils.Adapter {
 
     updateValues() {
         this.cleanConfigurations().then(() => {
-            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").finally(() => {
-                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").finally(() => {
-                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport").finally(() => {
-                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine").finally(() => {
+            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").finally(async () => {
+                await this.sleep(20000);
+                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").finally(async () => {
+                    await this.sleep(20000);
+                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport").finally(async () => {
+                        await this.sleep(20000);
+                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine").finally(async () => {
+                            await this.sleep(20000);
                             this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf").finally(() => {});
                         });
                     });
@@ -371,6 +380,11 @@ class Vaillant extends utils.Adapter {
     getMethod(url, path) {
         return new Promise((resolve, reject) => {
             if (this.isRelogin) {
+                resolve();
+                return;
+            }
+            if (path === "spine" && !this.isSpineActive) {
+                resolve();
                 return;
             }
             this.log.debug("Get: " + path);
@@ -388,6 +402,9 @@ class Vaillant extends utils.Adapter {
                 },
                 (err, resp, body) => {
                     if (body && body.errorCode) {
+                        if (body.errorCode === "SPINE_NOT_SUPPORTED_BY_FACILITY") {
+                            this.isSpineActive = false;
+                        }
                         this.log.debug(JSON.stringify(body.errorCode));
                         reject();
                         return;
@@ -400,11 +417,7 @@ class Vaillant extends utils.Adapter {
                                 this.log.info("401 Error try to relogin.");
                                 this.isRelogin = true;
                                 setTimeout(() => {
-                                    this.login().then(() => {
-                                        setTimeout(() => {
-                                            this.updateValues();
-                                        }, 10000);
-                                    });
+                                    this.login().then(() => {});
                                 }, 10000);
                             } else {
                                 this.log.info("Instance is trying to relogin.");
@@ -580,7 +593,9 @@ class Vaillant extends utils.Adapter {
 
         return "multimatic_" + result;
     }
-
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
     /**
      * Is called when adapter shuts down - callback has to be called under any circumstances!
      * @param {() => void} callback
