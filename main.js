@@ -204,7 +204,9 @@ class Vaillant extends utils.Adapter {
 
     login() {
         return new Promise((resolve, reject) => {
+            this.jar = request.jar();
             const body = { smartphoneId: this.smartPhoneId, password: this.config.password, username: this.config.user };
+            this.isRelogin && this.log.debug("Start relogin");
             request.post(
                 {
                     url: "https://smart.vaillant.com/mobile/api/v4/account/authentication/v1/token/new",
@@ -216,8 +218,10 @@ class Vaillant extends utils.Adapter {
                     gzip: true
                 },
                 (err, resp, body) => {
+                    this.isRelogin && this.log.debug("Relogin completed");
                     this.isRelogin = false;
                     if (err || (resp && resp.statusCode >= 400) || !body) {
+                        this.log.error("Failed to login");
                         this.log.error(err);
                         this.log.error(JSON.stringify(body));
                         this.log.error(resp.statusCode);
@@ -233,6 +237,7 @@ class Vaillant extends utils.Adapter {
                     this.atoken = body.body.authToken;
                     try {
                         this.authenticate(reject, resolve);
+                        this.reauthInterval && clearInterval(this.reauthInterval);
                         this.reauthInterval = setInterval(() => {
                             this.login();
                         }, 4 * 60 * 60 * 1000); //4h;
@@ -262,6 +267,7 @@ class Vaillant extends utils.Adapter {
             },
             (err, resp, body) => {
                 if (err || (resp && resp.statusCode >= 400)) {
+                    this.log.error("Authentication failed");
                     this.setState("info.connection", false, true);
                     err && this.log.error(JSON.stringify(err));
                     resp && this.log.error(resp.statusCode);
@@ -269,7 +275,9 @@ class Vaillant extends utils.Adapter {
                     reject();
                     return;
                 }
+                this.log.debug("Authentication successful");
                 this.log.debug(JSON.stringify(body));
+                this.setState("info.connection", true, true);
                 if (resolve) {
                     resolve();
                 }
@@ -395,28 +403,28 @@ class Vaillant extends utils.Adapter {
                     }
                     if (err || (resp && resp.statusCode >= 400)) {
                         this.setState("info.connection", false, true);
-                        if ((resp && resp.statusCode === 401) || JSON.stringify(body) === "NOT_AUTHORIZED" ) {
+                        if ((resp && resp.statusCode === 401) || JSON.stringify(body) === "NOT_AUTHORIZED") {
                             this.log.info(JSON.stringify(body));
                             if (!this.isRelogin) {
                                 this.log.info("401 Error try to relogin.");
                                 this.isRelogin = true;
                                 setTimeout(() => {
-                                    this.isRelogin = true;
                                     this.login().then(() => {
-                                        this.setState("info.connection", true, true);
                                         setTimeout(() => {
                                             this.updateValues();
                                         }, 10000);
                                     });
                                 }, 10000);
+                            } else {
+                                this.log.info("Instance is trying to relogin.");
                             }
                         } else {
                             err && this.log.error(err);
                             resp && this.log.error(resp && resp.statusCode);
                             body && this.log.error(JSON.stringify(body));
-                            this.log.error(path);
-                            reject();
+                            this.log.error("Failed to get:" + path);
                         }
+                        reject();
                         return;
                     }
                     this.log.debug(JSON.stringify(body));
