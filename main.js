@@ -139,6 +139,10 @@ class Vaillant extends utils.Adapter {
         this.serialNr = "";
         this.smartPhoneId = this.makeid();
         this.isSpineActive = true;
+        if (this.config.interval < 5) {
+            this.log.warn("Interval under 5min is not recommended. Set it back to 5min");
+            this.config.interval = 5;
+        }
         // "multimatic_xaTaFEDoEPgAXO0HmFSMeCr5kOT6LqZoQh4LTivdW4b8HncRlKJLtExwNqjaBY1ZPnYGZPGt60NNjim0zk6tl6imL77WZ2eSdEFatxlNFT5hZkdloAL8lstiBxjqNlr5pygs9JNrlcJoTrrX0sPoqLCgE7RTn35Ok77vfX9PA3T5sa3Eqph42wz9nWaZSlcC5UsbC1ooay";
     }
 
