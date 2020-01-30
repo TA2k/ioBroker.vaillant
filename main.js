@@ -137,8 +137,8 @@ class Vaillant extends utils.Adapter {
         };
         this.atoken = "";
         this.serialNr = "";
-        this.smartPhoneId =
-            "multimatic_xaTaFEDoEPgAXO0HmFSMeCr5kOT6LqZoQh4LTivdW4b8HncRlKJLtExwNqjaBY1ZPnYGZPGt60NNjim0zk6tl6imL77WZ2eSdEFatxlNFT5hZkdloAL8lstiBxjqNlr5pygs9JNrlcJoTrrX0sPoqLCgE7RTn35Ok77vfX9PA3T5sa3Eqph42wz9nWaZSlcC5UsbC1ooay";
+        this.smartPhoneId = this.makeid();
+        // "multimatic_xaTaFEDoEPgAXO0HmFSMeCr5kOT6LqZoQh4LTivdW4b8HncRlKJLtExwNqjaBY1ZPnYGZPGt60NNjim0zk6tl6imL77WZ2eSdEFatxlNFT5hZkdloAL8lstiBxjqNlr5pygs9JNrlcJoTrrX0sPoqLCgE7RTn35Ok77vfX9PA3T5sa3Eqph42wz9nWaZSlcC5UsbC1ooay";
     }
 
     /**
@@ -155,21 +155,15 @@ class Vaillant extends utils.Adapter {
                 this.setState("info.connection", true, true);
                 this.getFacility().then(() => {
                     this.cleanConfigurations().then(() => {
-                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status")
-                            .then(() => {})
-                            .catch(() => {});
-                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol")
-                            .then(() => {})
-                            .catch(() => {});
-                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport")
-                            .then(() => {})
-                            .catch(() => {});
-                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine")
-                            .then(() => {})
-                            .catch(() => {});
-                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
-                            .then(() => {})
-                            .catch(() => {});
+                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").finally(() => {
+                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").finally(() => {
+                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport").finally(() => {
+                                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine").finally(() => {
+                                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf").finally(() => {});
+                                    });
+                                });
+                            });
+                        });
                     });
 
                     this.updateInterval = setInterval(() => {
@@ -187,18 +181,15 @@ class Vaillant extends utils.Adapter {
 
     updateValues() {
         this.cleanConfigurations().then(() => {
-            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol")
-                .then(() => {})
-                .catch(() => {});
-            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport")
-                .then(() => {})
-                .catch(() => {});
-            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine")
-                .then(() => {})
-                .catch(() => {});
-            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
-                .then(() => {})
-                .catch(() => {});
+            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").finally(() => {
+                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").finally(() => {
+                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport").finally(() => {
+                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine").finally(() => {
+                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf").finally(() => {});
+                        });
+                    });
+                });
+            });
         });
     }
 
@@ -382,7 +373,7 @@ class Vaillant extends utils.Adapter {
             if (this.isRelogin) {
                 return;
             }
-            this.log.debug("Get " + path);
+            this.log.debug("Get: " + path);
 
             url = url.replace("/$serial/", "/" + this.serialNr + "/");
 
@@ -577,6 +568,19 @@ class Vaillant extends utils.Adapter {
             );
         });
     }
+
+    makeid() {
+        const length = 202;
+        let result = "";
+        const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        const charactersLength = characters.length;
+        for (let i = 0; i < length; i++) {
+            result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        }
+
+        return "multimatic_" + result;
+    }
+
     /**
      * Is called when adapter shuts down - callback has to be called under any circumstances!
      * @param {() => void} callback
