@@ -1,6 +1,6 @@
 {
   "name": "iobroker.vaillant",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Vaillant multiMatic VR900/VR920 Adapter",
   "author": {
     "name": "TA2k",
