@@ -138,6 +138,7 @@ class Vaillant extends utils.Adapter {
         this.atoken = "";
         this.serialNr = "";
         if (!this.config.smartPhoneId) {
+            this.log.info("Generate new Id");
             this.config.smartPhoneId  = this.makeid();
         }
         this.isSpineActive = true;
