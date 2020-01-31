@@ -137,7 +137,9 @@ class Vaillant extends utils.Adapter {
         };
         this.atoken = "";
         this.serialNr = "";
-        this.smartPhoneId = this.makeid();
+        if (!this.config.smartPhoneId) {
+            this.config.smartPhoneId  = this.makeid();
+        }
         this.isSpineActive = true;
 
         // "multimatic_xaTaFEDoEPgAXO0HmFSMeCr5kOT6LqZoQh4LTivdW4b8HncRlKJLtExwNqjaBY1ZPnYGZPGt60NNjim0zk6tl6imL77WZ2eSdEFatxlNFT5hZkdloAL8lstiBxjqNlr5pygs9JNrlcJoTrrX0sPoqLCgE7RTn35Ok77vfX9PA3T5sa3Eqph42wz9nWaZSlcC5UsbC1ooay";
@@ -209,7 +211,7 @@ class Vaillant extends utils.Adapter {
     login() {
         return new Promise((resolve, reject) => {
             this.jar = request.jar();
-            const body = { smartphoneId: this.smartPhoneId, password: this.config.password, username: this.config.user };
+            const body = { smartphoneId: this.config.smartPhoneId, password: this.config.password, username: this.config.user };
             this.isRelogin && this.log.debug("Start relogin");
             request.post(
                 {
@@ -257,7 +259,7 @@ class Vaillant extends utils.Adapter {
     authenticate(reject, resolve) {
         const authBody = {
             authToken: this.atoken,
-            smartphoneId: this.smartPhoneId,
+            smartphoneId: this.config.smartPhoneId,
             username: this.config.user
         };
         request.post(

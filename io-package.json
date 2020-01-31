@@ -71,7 +71,8 @@
     "native": {
         "user": "",
         "password": "",
-        "interval": 5
+        "interval": 5,
+        "smartPhoneId": ""
     },
     "objects": [],
     "instanceObjects": [
