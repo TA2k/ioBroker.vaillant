@@ -137,10 +137,7 @@ class Vaillant extends utils.Adapter {
         };
         this.atoken = "";
         this.serialNr = "";
-        if (this.config && !this.config.smartPhoneId) {
-            this.log.info("Generate new Id");
-            this.config.smartPhoneId  = this.makeid();
-        }
+        
         this.isSpineActive = true;
 
         // "multimatic_xaTaFEDoEPgAXO0HmFSMeCr5kOT6LqZoQh4LTivdW4b8HncRlKJLtExwNqjaBY1ZPnYGZPGt60NNjim0zk6tl6imL77WZ2eSdEFatxlNFT5hZkdloAL8lstiBxjqNlr5pygs9JNrlcJoTrrX0sPoqLCgE7RTn35Ok77vfX9PA3T5sa3Eqph42wz9nWaZSlcC5UsbC1ooay";
@@ -154,6 +151,10 @@ class Vaillant extends utils.Adapter {
         if (this.config.interval < 5) {
             this.log.warn("Interval under 5min is not recommended. Set it back to 5min");
             this.config.interval = 5;
+        }
+        if (this.config && !this.config.smartPhoneId) {
+            this.log.info("Generate new Id");
+            this.config.smartPhoneId  = this.makeid();
         }
         // Reset the connection indicator during startup
         this.setState("info.connection", false, true);
