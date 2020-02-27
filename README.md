@@ -21,7 +21,7 @@ Change objects in the folders configuration. Some configuration will only work w
 
 ## Changelog
 
-### 0.0.1
+### 0.0.6
 
 - (TA2k) initial release
 

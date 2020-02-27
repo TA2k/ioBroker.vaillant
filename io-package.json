@@ -1,9 +1,9 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.0.5",
+    "version": "0.0.6",
     "news": {
-      "0.0.1": {
+      "0.0.6": {
         "en": "initial release",
         "de": "Erstveröffentlichung",
         "ru": "Начальная версия",
@@ -72,7 +72,7 @@
   "native": {
     "user": "",
     "password": "",
-    "interval": 5,
+    "interval": 15,
     "smartPhoneId": ""
   },
   "objects": [],

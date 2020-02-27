@@ -9,108 +9,7 @@
 const utils = require("@iobroker/adapter-core");
 const request = require("request");
 const traverse = require("traverse");
-// Load your modules here, e.g.:
-// const fs = require("fs");
 
-/*
-https://smart.vaillant.com/mobile/api/v4/account/authentication/v1/authenticate
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/dhw/{dhw_id}/circulation
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/dhw/{dhw_id}/circulation/configuration
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/dhw/{dhw_id}/circulation/configuration/timeprogram
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/repeaters/{sgtin}
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/dhw/{dhw_id}
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/emf/v1/devices
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/emf/v1/devices/{device_id}
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/storage/default
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/system/v1/details
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/system/v1/installerinfo
-https://smart.vaillant.com/mobile/api/v4/facilities
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/storage
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/system/v1/status
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/dhw/{dhw_id}/hotwater
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/dhw/{dhw_id}/hotwater/configuration
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/dhw/{dhw_id}/hotwater/configuration/operation_mode
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/dhw/{dhw_id}/hotwater/configuration/temperature_setpoint
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/dhw/{dhw_id}/hotwater/configuration/timeprogram
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/hvacstate/v1/overview
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/hvacstate/v1/hvacMessages/update
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/livereport/v1
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/livereport/v1/devices/{device_id}/reports/{report_id}
-https://smart.vaillant.com/mobile/api/v4/account/authentication/v1/logout
-https://smart.vaillant.com/mobile/api/v4/account/authentication/v1/token/new
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/spine/v1/currentPVMeteringInfo
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/installationStatus
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/underfloorHeatingStatus
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/repeaters
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/rooms/{room_index}
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/rooms/{room_index}/configuration
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/rooms/{room_index}/configuration/operationMode
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/rooms/{room_index}/configuration/quickVeto
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/rooms/{room_index}/configuration/childLock
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/rooms/{room_index}/configuration/devices/{sgtin}/name
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/rooms/{room_index}/configuration/name
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/rooms/{room_index}/configuration/temperatureSetpoint
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/rooms/{room_index}/timeprogram
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/rooms
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/rbr/v1/repeaters/{sgtin}/name
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/ventilation/{ventilation_id}/fan/configuration/day_level
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/ventilation/{ventilation_id}/fan/configuration/night_level
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/ventilation/{ventilation_id}/fan/configuration/operation_mode
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/configuration
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/status/datetime
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/configuration/holidaymode
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/parameters
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/configuration/quickmode
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/status
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/ventilation/{ventilation_id}
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/ventilation/{ventilation_id}/fan/configuration
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/ventilation/{ventilation_id}/fan/configuration/timeprogram
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones/{zone_id}
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones/{zone_id}/configuration
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones/{zone_id}/cooling/configuration
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones/{zone_id}/cooling/configuration/manual_mode_cooling_temperature_setpoint
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones/{zone_id}/cooling/configuration/mode
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones/{zone_id}/cooling/configuration/setpoint_temperature
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones/{zone_id}/cooling/timeprogram
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones/{zone_id}/heating/configuration
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones/{zone_id}/heating/configuration/mode
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones/{zone_id}/heating/configuration/setback_temperature
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones/{zone_id}/heating/configuration/setpoint_temperature
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones/{zone_id}/heating/timeprogram
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones/{zone_id}/configuration/name
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones/{zone_id}/configuration/quick_veto
-https://smart.vaillant.com/mobile/api/v4/facilities/{serial_number}/systemcontrol/v1/zones 
-
-
-energyType, it can be
-– LIVE_DATA
-– CONSUMED_PRIMARY_ENERGY
-– CONSUMED_ELECTRICAL_POWER
-– ENVIRONMENTAL_YIELD
-– SOLAR_YIELD
-– GRID_FEED_IN_ENERGY
-– SELF_CONSUMED_ENERGY
-– EARNED_PV_ENERGY
-
-function:
-– CENTRAL_HEATING
-– DHW
-– COOLING
-– COMBINED
-– PV
-
-timeRange
-– DAY
-– WEEK
-– MONTH
-– YEAR
-
-start:
-– any date with format yyyy-MM-dd
-
-
-*/
 
 class Vaillant extends utils.Adapter {
     /**
@@ -139,8 +38,6 @@ class Vaillant extends utils.Adapter {
         this.serialNr = "";
         
         this.isSpineActive = true;
-
-        // "multimatic_xaTaFEDoEPgAXO0HmFSMeCr5kOT6LqZoQh4LTivdW4b8HncRlKJLtExwNqjaBY1ZPnYGZPGt60NNjim0zk6tl6imL77WZ2eSdEFatxlNFT5hZkdloAL8lstiBxjqNlr5pygs9JNrlcJoTrrX0sPoqLCgE7RTn35Ok77vfX9PA3T5sa3Eqph42wz9nWaZSlcC5UsbC1ooay";
     }
 
     /**
@@ -212,6 +109,11 @@ class Vaillant extends utils.Adapter {
 
     login() {
         return new Promise((resolve, reject) => {
+            if (!this.config.password ||!this.config.user) {
+                this.log.warn("Missing username or password");
+                reject();
+                return;
+            }
             this.jar = request.jar();
             const body = { smartphoneId: this.config.smartPhoneId, password: this.config.password, username: this.config.user };
             this.isRelogin && this.log.debug("Start relogin");
