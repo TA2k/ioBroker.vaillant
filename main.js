@@ -10,7 +10,6 @@ const utils = require("@iobroker/adapter-core");
 const request = require("request");
 const traverse = require("traverse");
 
-
 class Vaillant extends utils.Adapter {
     /**
      * @param {Partial<ioBroker.AdapterOptions>} [options={}]
@@ -36,7 +35,7 @@ class Vaillant extends utils.Adapter {
         };
         this.atoken = "";
         this.serialNr = "";
-        
+        this.adapterStopped = false;
         this.isSpineActive = true;
     }
 
@@ -45,13 +44,20 @@ class Vaillant extends utils.Adapter {
      */
     async onReady() {
         // Initialize your adapter here
+        const obj = await this.getForeignObjectAsync("system.config");
+        if (obj && obj.native && obj.native.secret) {
+            this.config.password = this.decrypt(obj.native.secret, this.config.password);
+        } else {
+            this.config.password = this.decrypt("Zgfr56gFe87jJOM", this.config.password);
+        }
+
         if (this.config.interval < 5) {
             this.log.warn("Interval under 5min is not recommended. Set it back to 5min");
             this.config.interval = 5;
         }
         if (this.config && !this.config.smartPhoneId) {
             this.log.info("Generate new Id");
-            this.config.smartPhoneId  = this.makeid();
+            this.config.smartPhoneId = this.makeid();
         }
         // Reset the connection indicator during startup
         this.setState("info.connection", false, true);
@@ -109,7 +115,7 @@ class Vaillant extends utils.Adapter {
 
     login() {
         return new Promise((resolve, reject) => {
-            if (!this.config.password ||!this.config.user) {
+            if (!this.config.password || !this.config.user) {
                 this.log.warn("Missing username or password");
                 reject();
                 return;
@@ -250,7 +256,7 @@ class Vaillant extends utils.Adapter {
                     });
                     try {
                         const adapter = this;
-                        traverse(facility).forEach(function(value) {
+                        traverse(facility).forEach(async function(value) {
                             if (this.path.length > 0 && this.isLeaf) {
                                 const modPath = this.path;
                                 this.path.forEach((pathElement, pathIndex) => {
@@ -263,7 +269,7 @@ class Vaillant extends utils.Adapter {
                                         modPath.splice(parentIndex + 1, 1);
                                     }
                                 });
-                                adapter.setObjectNotExists(facility.serialNumber + ".general." + modPath.join("."), {
+                                await adapter.setObjectNotExistsAsync(facility.serialNumber + ".general." + modPath.join("."), {
                                     type: "state",
                                     common: {
                                         name: this.key,
@@ -289,7 +295,7 @@ class Vaillant extends utils.Adapter {
     }
     getMethod(url, path) {
         return new Promise((resolve, reject) => {
-            if (this.isRelogin) {
+            if (this.isRelogin || this.adapterStopped) {
                 resolve();
                 return;
             }
@@ -491,7 +497,13 @@ class Vaillant extends utils.Adapter {
             );
         });
     }
-
+    decrypt(key, value) {
+        let result = "";
+        for (let i = 0; i < value.length; ++i) {
+            result += String.fromCharCode(key[i % key.length].charCodeAt(0) ^ value.charCodeAt(i));
+        }
+        return result;
+    }
     makeid() {
         const length = 202;
         let result = "";
@@ -504,6 +516,9 @@ class Vaillant extends utils.Adapter {
         return "multimatic_" + result;
     }
     sleep(ms) {
+        if (this.adapterStopped) {
+            ms = 0;
+        }
         return new Promise(resolve => setTimeout(resolve, ms));
     }
     /**
@@ -513,6 +528,7 @@ class Vaillant extends utils.Adapter {
     onUnload(callback) {
         try {
             this.log.info("cleaned everything up...");
+            this.adapterStopped = true;
             clearInterval(this.updateInterval);
             clearInterval(this.reauthInterval);
             callback();
