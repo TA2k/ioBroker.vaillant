@@ -66,9 +66,8 @@
       {
         "js-controller": ">=1.4.2"
       }
-    ],
-    "installedFrom": "https://github.com/TA2k/ioBroker.vaillant/tarball/ae37f5666ed1025bdbaa934bdd950c88dec20e1c"
-  },
+    ]
+},
   "native": {
     "user": "",
     "password": "",
