@@ -26,6 +26,7 @@ class Vaillant extends utils.Adapter {
         this.jar = request.jar();
         this.updateInterval = null;
         this.reauthInterval = null;
+        this.reloginTimeout = null;
         this.isRelogin = false;
         this.baseHeader = {
             "Vaillant-Mobile-App": "multiMATIC v2.1.45 b389 (Android)",
@@ -332,7 +333,7 @@ class Vaillant extends utils.Adapter {
                             if (!this.isRelogin) {
                                 this.log.info("401 Error try to relogin.");
                                 this.isRelogin = true;
-                                setTimeout(() => {
+                                this.reloginTimeout = setTimeout(() => {
                                     this.login().then(() => {});
                                 }, 10000);
                             } else {
@@ -531,6 +532,7 @@ class Vaillant extends utils.Adapter {
             this.adapterStopped = true;
             clearInterval(this.updateInterval);
             clearInterval(this.reauthInterval);
+            clearTimeout(this.reloginTimeout);
             callback();
         } catch (e) {
             callback();
