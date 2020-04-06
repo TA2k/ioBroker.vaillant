@@ -64,7 +64,7 @@ class Vaillant extends utils.Adapter {
         this.setState("info.connection", false, true);
         this.login()
             .then(() => {
-                this.log.debug("Login successful");
+               
                 this.setState("info.connection", true, true);
                 this.getFacility().then(() => {
                     this.cleanConfigurations().then(() => {
@@ -135,8 +135,8 @@ class Vaillant extends utils.Adapter {
                     gzip: true
                 },
                 (err, resp, body) => {
-                    this.isRelogin && this.log.debug("Relogin completed");
-                    this.isRelogin = false;
+                    this.isRelogin && this.log.debug("Relogin completed start reauth");
+                    
                     if (err || (resp && resp.statusCode >= 400) || !body) {
                         this.log.error("Failed to login");
                         this.log.error(err);
@@ -153,6 +153,7 @@ class Vaillant extends utils.Adapter {
                     }
                     this.atoken = body.body.authToken;
                     try {
+                        this.log.debug("Login successful");
                         this.authenticate(reject, resolve);
                         this.reauthInterval && clearInterval(this.reauthInterval);
                         this.reauthInterval = setInterval(() => {
@@ -183,6 +184,7 @@ class Vaillant extends utils.Adapter {
                 json: true
             },
             (err, resp, body) => {
+                this.isRelogin = false;
                 if (err || (resp && resp.statusCode >= 400)) {
                     this.log.error("Authentication failed");
                     this.setState("info.connection", false, true);
@@ -297,6 +299,7 @@ class Vaillant extends utils.Adapter {
     getMethod(url, path) {
         return new Promise((resolve, reject) => {
             if (this.isRelogin || this.adapterStopped) {
+                this.log.debug("Instance is relogining ignores: " + path);
                 resolve();
                 return;
             }
@@ -327,17 +330,20 @@ class Vaillant extends utils.Adapter {
                         return;
                     }
                     if (err || (resp && resp.statusCode >= 400)) {
+                        this.log.debug("Error response from: " + path);
                         this.setState("info.connection", false, true);
                         if ((resp && resp.statusCode === 401) || JSON.stringify(body) === "NOT_AUTHORIZED") {
                             this.log.info(JSON.stringify(body));
                             if (!this.isRelogin) {
                                 this.log.info("401 Error try to relogin.");
                                 this.isRelogin = true;
+                                this.reloginTimeout && clearTimeout(this.reloginTimeout);
                                 this.reloginTimeout = setTimeout(() => {
-                                    this.login().then(() => {});
+                                    this.log.debug("Start relogin");
+                                    this.login().then(() => { this.log.debug("Relogin completed");});
                                 }, 10000);
                             } else {
-                                this.log.info("Instance is trying to relogin.");
+                                this.log.info("Instance is already trying to relogin.");
                             }
                         } else {
                             err && this.log.error(err);
@@ -348,6 +354,7 @@ class Vaillant extends utils.Adapter {
                         reject();
                         return;
                     }
+                    this.log.debug(path + " successful");
                     this.log.debug(JSON.stringify(body));
 
                     try {
@@ -392,7 +399,7 @@ class Vaillant extends utils.Adapter {
                                         name: this.key,
                                         role: "indicator",
                                         type: typeof value,
-                                        write: false,
+                                        write: true,
                                         read: true
                                     },
                                     native: {}
@@ -419,7 +426,7 @@ class Vaillant extends utils.Adapter {
                                             name: this.node.name,
                                             role: "indicator",
                                             type: "mixed",
-                                            write: false,
+                                            write: true,
                                             read: true
                                         },
                                         native: {}
