@@ -208,17 +208,24 @@ class Vaillant extends utils.Adapter {
             const pre = this.name + "." + this.instance;
             this.getStates(pre + ".*", (err, states) => {
                 const allIds = Object.keys(states);
+                const promiseArray = [];
                 allIds.forEach(async keyName => {
-                    if (keyName.indexOf(".configuration") !== -1) {
-                        await this.delObjectAsync(
-                            keyName
-                                .split(".")
-                                .slice(2)
-                                .join(".")
-                        );
-                    }
+                    const promise = new Promise(async (resolve, reject) => {
+                        if (keyName.indexOf(".configuration") !== -1) {
+                            await this.delObjectAsync(
+                                keyName
+                                    .split(".")
+                                    .slice(2)
+                                    .join(".")
+                            );
+                        }
+                        resolve();
+                    });
+                    promiseArray.push(promise);
                 });
-                resolve();
+                Promise.all(promiseArray).then(() => {
+                    resolve();
+                });
             });
         });
     }
