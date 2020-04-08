@@ -21,7 +21,7 @@ Change objects in the folders configuration. Some configuration will only work w
 
 ## Changelog
 
-### 0.0.7
+### 0.0.8
 
 - (TA2k) Fix Authorization problem and missing configuration states
 
