@@ -1,11 +1,10 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "news": {
-
-      "0.0.7": {
-        "en": "Fix Authorization problem and missing configuration states",
+      "0.0.8": {
+        "en": "Fix Authorization problem and missing configuration states"
       },
       "0.0.6": {
         "en": "initial release",
