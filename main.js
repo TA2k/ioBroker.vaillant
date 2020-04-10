@@ -97,7 +97,8 @@ class Vaillant extends utils.Adapter {
     }
 
     updateValues() {
-        this.cleanConfigurations().then(() => {
+        this.cleanConfigurations().then(async () => {
+            await this.sleep(5000);
             this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").finally(async () => {
                 await this.sleep(20000);
                 this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").finally(async () => {
@@ -212,12 +213,19 @@ class Vaillant extends utils.Adapter {
                 allIds.forEach(async keyName => {
                     const promise = new Promise(async (resolve, reject) => {
                         if (keyName.indexOf(".configuration") !== -1) {
-                            await this.delObjectAsync(
-                                keyName
-                                    .split(".")
-                                    .slice(2)
-                                    .join(".")
-                            );
+                            try {
+                                await this.delObjectAsync(
+                                    keyName
+                                        .split(".")
+                                        .slice(2)
+                                        .join(".")
+                                );
+                                
+                            } catch (error) {
+                                this.log.debug(error);
+                                
+                            }
+                          
                         }
                         resolve();
                     });
@@ -363,7 +371,10 @@ class Vaillant extends utils.Adapter {
                     }
                     this.log.debug(path + " successful");
                     this.log.debug(JSON.stringify(body));
-
+                    if (!body) {
+                        resolve();
+                        return;
+                    }
                     try {
                         const adapter = this;
                         traverse(body.body).forEach(function(value) {
