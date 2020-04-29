@@ -17,7 +17,7 @@ class Vaillant extends utils.Adapter {
     constructor(options) {
         super({
             ...options,
-            name: "vaillant"
+            name: "vaillant",
         });
         this.on("ready", this.onReady.bind(this));
         this.on("stateChange", this.onStateChange.bind(this));
@@ -32,7 +32,7 @@ class Vaillant extends utils.Adapter {
             "Vaillant-Mobile-App": "multiMATIC v2.1.45 b389 (Android)",
             "User-Agent": "okhttp/3.10.0",
             "Content-Type": "application/json; charset=UTF-8",
-            "Accept-Encoding": "gzip"
+            "Accept-Encoding": "gzip",
         };
         this.atoken = "";
         this.serialNr = "";
@@ -64,29 +64,46 @@ class Vaillant extends utils.Adapter {
         this.setState("info.connection", false, true);
         this.login()
             .then(() => {
-               
                 this.setState("info.connection", true, true);
-                this.getFacility().then(() => {
-                    this.cleanConfigurations().then(() => {
-                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").finally(async () => {
-                            await this.sleep(10000);
-                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").finally(async () => {
-                                await this.sleep(10000);
-                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport").finally(async () => {
-                                    await this.sleep(10000);
-                                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine").finally(async () => {
+                this.getFacility()
+                    .then(() => {
+                        this.cleanConfigurations()
+                            .then(() => {
+                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status")
+                                    .catch(() => this.log.error("Failed to get status"))
+                                    .finally(async () => {
                                         await this.sleep(10000);
-                                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf").finally(() => {});
+                                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol")
+                                            .catch(() => this.log.error("Failed to get systemcontrol"))
+                                            .finally(async () => {
+                                                await this.sleep(10000);
+                                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport")
+                                                    .catch(() => this.log.error("Failed to get livereport"))
+                                                    .finally(async () => {
+                                                        await this.sleep(10000);
+                                                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine")
+                                                            .catch(() => this.log.error("Failed to get spine"))
+                                                            .finally(async () => {
+                                                                await this.sleep(10000);
+                                                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
+                                                                    .catch(() => this.log.error("Failed to get emf"))
+                                                                    .finally(() => {});
+                                                            });
+                                                    });
+                                            });
                                     });
-                                });
+                            })
+                            .catch(() => {
+                                this.log.error("clean configuration failed");
                             });
-                        });
-                    });
 
-                    this.updateInterval = setInterval(() => {
-                        this.updateValues();
-                    }, this.config.interval * 60 * 1000);
-                });
+                        this.updateInterval = setInterval(() => {
+                            this.updateValues();
+                        }, this.config.interval * 60 * 1000);
+                    })
+                    .catch(() => {
+                        this.log.error("facility failed");
+                    });
             })
             .catch(() => {
                 this.log.error("Login failed");
@@ -97,22 +114,26 @@ class Vaillant extends utils.Adapter {
     }
 
     updateValues() {
-        this.cleanConfigurations().then(async () => {
-            await this.sleep(5000);
-            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").finally(async () => {
-                await this.sleep(20000);
-                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").finally(async () => {
+        this.cleanConfigurations()
+            .then(async () => {
+                await this.sleep(5000);
+                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").finally(async () => {
                     await this.sleep(20000);
-                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport").finally(async () => {
+                    this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").finally(async () => {
                         await this.sleep(20000);
-                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine").finally(async () => {
+                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport").finally(async () => {
                             await this.sleep(20000);
-                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf").finally(() => {});
+                            this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine").finally(async () => {
+                                await this.sleep(20000);
+                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf").finally(() => {});
+                            });
                         });
                     });
                 });
+            })
+            .catch(() => {
+                this.log.error("clean configuration failed");
             });
-        });
     }
 
     login() {
@@ -133,11 +154,11 @@ class Vaillant extends utils.Adapter {
                     json: true,
                     body: body,
                     jar: this.jar,
-                    gzip: true
+                    gzip: true,
                 },
                 (err, resp, body) => {
                     this.isRelogin && this.log.debug("Relogin completed start reauth");
-                    
+
                     if (err || (resp && resp.statusCode >= 400) || !body) {
                         this.log.error("Failed to login");
                         this.log.error(err);
@@ -173,7 +194,7 @@ class Vaillant extends utils.Adapter {
         const authBody = {
             authToken: this.atoken,
             smartphoneId: this.config.smartPhoneId,
-            username: this.config.user
+            username: this.config.user,
         };
         request.post(
             {
@@ -182,7 +203,7 @@ class Vaillant extends utils.Adapter {
                 followAllRedirects: true,
                 body: authBody,
                 jar: this.jar,
-                json: true
+                json: true,
             },
             (err, resp, body) => {
                 this.isRelogin = false;
@@ -205,35 +226,32 @@ class Vaillant extends utils.Adapter {
         );
     }
     cleanConfigurations() {
-        return new Promise(resolve => {
+        return new Promise((resolve) => {
             const pre = this.name + "." + this.instance;
             this.getStates(pre + ".*", (err, states) => {
                 const allIds = Object.keys(states);
                 const promiseArray = [];
-                allIds.forEach(async keyName => {
+                allIds.forEach(async (keyName) => {
                     const promise = new Promise(async (resolve, reject) => {
                         if (keyName.indexOf(".configuration") !== -1) {
                             try {
-                                await this.delObjectAsync(
-                                    keyName
-                                        .split(".")
-                                        .slice(2)
-                                        .join(".")
-                                );
-                                
+                                await this.delObjectAsync(keyName.split(".").slice(2).join("."));
                             } catch (error) {
                                 this.log.debug(error);
-                                
                             }
-                          
                         }
                         resolve();
                     });
                     promiseArray.push(promise);
                 });
-                Promise.all(promiseArray).then(() => {
-                    resolve();
-                });
+                Promise.all(promiseArray)
+                    .then(() => {
+                        resolve();
+                    })
+                    .catch(() => {
+                        this.log.error("deleting failed");
+                        resolve();
+                    });
             });
         });
     }
@@ -246,7 +264,7 @@ class Vaillant extends utils.Adapter {
                     followAllRedirects: true,
                     json: true,
                     jar: this.jar,
-                    gzip: true
+                    gzip: true,
                 },
                 (err, resp, body) => {
                     if (err || (resp && resp.statusCode >= 400) || !body) {
@@ -268,13 +286,13 @@ class Vaillant extends utils.Adapter {
                             name: facility.name,
                             role: "indicator",
                             write: false,
-                            read: true
+                            read: true,
                         },
-                        native: {}
+                        native: {},
                     });
                     try {
                         const adapter = this;
-                        traverse(facility).forEach(async function(value) {
+                        traverse(facility).forEach(async function (value) {
                             if (this.path.length > 0 && this.isLeaf) {
                                 const modPath = this.path;
                                 this.path.forEach((pathElement, pathIndex) => {
@@ -294,9 +312,9 @@ class Vaillant extends utils.Adapter {
                                         role: "indicator",
                                         type: typeof value,
                                         write: false,
-                                        read: true
+                                        read: true,
                                     },
-                                    native: {}
+                                    native: {},
                                 });
                                 adapter.setState(facility.serialNumber + ".general." + modPath.join("."), value, true);
                             }
@@ -333,7 +351,7 @@ class Vaillant extends utils.Adapter {
                     followAllRedirects: true,
                     json: true,
                     jar: this.jar,
-                    gzip: true
+                    gzip: true,
                 },
                 (err, resp, body) => {
                     if (body && body.errorCode) {
@@ -355,7 +373,13 @@ class Vaillant extends utils.Adapter {
                                 this.reloginTimeout && clearTimeout(this.reloginTimeout);
                                 this.reloginTimeout = setTimeout(() => {
                                     this.log.debug("Start relogin");
-                                    this.login().then(() => { this.log.debug("Relogin completed");});
+                                    this.login()
+                                        .then(() => {
+                                            this.log.debug("Relogin completed");
+                                        })
+                                        .catch(() => {
+                                            this.log.error("Relogin failed");
+                                        });
                                 }, 10000);
                             } else {
                                 this.log.info("Instance is already trying to relogin.");
@@ -377,7 +401,7 @@ class Vaillant extends utils.Adapter {
                     }
                     try {
                         const adapter = this;
-                        traverse(body.body).forEach(function(value) {
+                        traverse(body.body).forEach(function (value) {
                             if (this.path.length > 0 && this.isLeaf) {
                                 const modPath = this.path;
                                 this.path.forEach((pathElement, pathIndex) => {
@@ -400,9 +424,9 @@ class Vaillant extends utils.Adapter {
                                             role: "indicator",
                                             type: "mixed",
                                             write: true,
-                                            read: true
+                                            read: true,
                                         },
-                                        native: {}
+                                        native: {},
                                     });
                                 }
                                 if (path === "emf") {
@@ -418,9 +442,9 @@ class Vaillant extends utils.Adapter {
                                         role: "indicator",
                                         type: typeof value,
                                         write: true,
-                                        read: true
+                                        read: true,
                                     },
-                                    native: {}
+                                    native: {},
                                 });
                                 adapter.setState(adapter.serialNr + "." + path + "." + modPath.join("."), value, true);
                             } else if (path === "systemcontrol" && this.path.length > 0 && !isNaN(this.path[this.path.length - 1])) {
@@ -445,9 +469,9 @@ class Vaillant extends utils.Adapter {
                                             role: "indicator",
                                             type: "mixed",
                                             write: true,
-                                            read: true
+                                            read: true,
                                         },
-                                        native: {}
+                                        native: {},
                                     });
                                 }
                             }
@@ -466,10 +490,7 @@ class Vaillant extends utils.Adapter {
         return new Promise(async (resolve, reject) => {
             const idArray = id.split(".");
             const action = idArray[idArray.length - 1];
-            const idPath = id
-                .split(".")
-                .splice(2)
-                .slice(0, 3);
+            const idPath = id.split(".").splice(2).slice(0, 3);
             let path = [];
             let url = "";
             const body = {};
@@ -502,7 +523,7 @@ class Vaillant extends utils.Adapter {
                     body: body,
                     json: true,
                     gzip: true,
-                    jar: this.jar
+                    jar: this.jar,
                 },
                 (err, resp, body) => {
                     if (err || (resp && resp.statusCode >= 400)) {
@@ -545,7 +566,7 @@ class Vaillant extends utils.Adapter {
         if (this.adapterStopped) {
             ms = 0;
         }
-        return new Promise(resolve => setTimeout(resolve, ms));
+        return new Promise((resolve) => setTimeout(resolve, ms));
     }
     /**
      * Is called when adapter shuts down - callback has to be called under any circumstances!
@@ -588,7 +609,7 @@ if (module.parent) {
     /**
      * @param {Partial<ioBroker.AdapterOptions>} [options={}]
      */
-    module.exports = options => new Vaillant(options);
+    module.exports = (options) => new Vaillant(options);
 } else {
     // otherwise start the instance directly
     new Vaillant();
