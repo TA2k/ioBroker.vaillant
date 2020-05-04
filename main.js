@@ -70,23 +70,23 @@ class Vaillant extends utils.Adapter {
                         this.cleanConfigurations()
                             .then(() => {
                                 this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status")
-                                    .catch(() => this.log.error("Failed to get status"))
+                                    .catch(() => this.log.debug("Failed to get status"))
                                     .finally(async () => {
                                         await this.sleep(10000);
                                         this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol")
-                                            .catch(() => this.log.error("Failed to get systemcontrol"))
+                                            .catch(() => this.log.debug("Failed to get systemcontrol"))
                                             .finally(async () => {
                                                 await this.sleep(10000);
                                                 this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport")
-                                                    .catch(() => this.log.error("Failed to get livereport"))
+                                                    .catch(() => this.log.debug("Failed to get livereport"))
                                                     .finally(async () => {
                                                         await this.sleep(10000);
                                                         this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine")
-                                                            .catch(() => this.log.error("Failed to get spine"))
+                                                            .catch(() => this.log.debug("Failed to get spine"))
                                                             .finally(async () => {
                                                                 await this.sleep(10000);
                                                                 this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
-                                                                    .catch(() => this.log.error("Failed to get emf"))
+                                                                    .catch(() => this.log.debug("Failed to get emf"))
                                                                     .finally(() => {});
                                                             });
                                                     });

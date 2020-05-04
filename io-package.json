@@ -1,8 +1,11 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.0.8",
+    "version": "0.0.9",
     "news": {
+      "0.0.9": {
+        "en": "fix issue with js-controller 3"
+      },
       "0.0.8": {
         "en": "Fix Authorization problem and missing configuration states"
       },
@@ -70,7 +73,7 @@
         "js-controller": ">=1.4.2"
       }
     ]
-},
+  },
   "native": {
     "user": "",
     "password": "",
