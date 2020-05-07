@@ -1,9 +1,9 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.0.9",
+    "version": "0.0.10",
     "news": {
-      "0.0.9": {
+      "0.0.10": {
         "en": "fix issue with js-controller 3"
       },
       "0.0.8": {
