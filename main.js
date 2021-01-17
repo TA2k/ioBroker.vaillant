@@ -276,7 +276,7 @@ class Vaillant extends utils.Adapter {
                     jar: this.jar,
                     gzip: true,
                 },
-                (err, resp, body) => {
+                async (err, resp, body) => {
                     if (err || (resp && resp.statusCode >= 400) || !body) {
                         this.log.error(err);
                         reject();
@@ -290,7 +290,7 @@ class Vaillant extends utils.Adapter {
                     }
                     const facility = body.body.facilitiesList[0];
                     this.serialNr = facility.serialNumber;
-                    this.setObjectNotExists(facility.serialNumber, {
+                    await this.setObjectNotExistsAsync(facility.serialNumber, {
                         type: "device",
                         common: {
                             name: facility.name,
@@ -315,7 +315,7 @@ class Vaillant extends utils.Adapter {
                                         modPath.splice(parentIndex + 1, 1);
                                     }
                                 });
-                                await adapter.setObjectNotExistsAsync(facility.serialNumber + ".general." + modPath.join("."), {
+                                await await adapter.setObjectNotExistsAsyncAsync(facility.serialNumber + ".general." + modPath.join("."), {
                                     type: "state",
                                     common: {
                                         name: this.key,
@@ -326,6 +326,9 @@ class Vaillant extends utils.Adapter {
                                     },
                                     native: {},
                                 });
+                                if (typeof value === "object") {
+                                    value = JSON.stringify(value);
+                                }
                                 adapter.setState(facility.serialNumber + ".general." + modPath.join("."), value, true);
                             }
                         });
@@ -411,7 +414,7 @@ class Vaillant extends utils.Adapter {
                     }
                     try {
                         const adapter = this;
-                        traverse(body.body).forEach(function (value) {
+                        traverse(body.body).forEach(async function (value) {
                             if (this.path.length > 0 && this.isLeaf) {
                                 const modPath = this.path;
                                 this.path.forEach((pathElement, pathIndex) => {
@@ -427,7 +430,7 @@ class Vaillant extends utils.Adapter {
 
                                 if (path === "systemcontrol" && modPath[0].indexOf("parameters") !== -1 && modPath[1] === "name") {
                                     //add value field for parameters
-                                    adapter.setObjectNotExists(adapter.serialNr + "." + path + "." + modPath[0] + ".parameterValue", {
+                                    await adapter.setObjectNotExistsAsync(adapter.serialNr + "." + path + "." + modPath[0] + ".parameterValue", {
                                         type: "state",
                                         common: {
                                             name: "Value for " + value + ". See definition for values.",
@@ -445,7 +448,7 @@ class Vaillant extends utils.Adapter {
                                     }
                                 }
 
-                                adapter.setObjectNotExists(adapter.serialNr + "." + path + "." + modPath.join("."), {
+                                await adapter.setObjectNotExistsAsync(adapter.serialNr + "." + path + "." + modPath.join("."), {
                                     type: "state",
                                     common: {
                                         name: this.key,
@@ -456,6 +459,9 @@ class Vaillant extends utils.Adapter {
                                     },
                                     native: {},
                                 });
+                                if (typeof value === "object") {
+                                    value = JSON.stringify(value);
+                                }
                                 adapter.setState(adapter.serialNr + "." + path + "." + modPath.join("."), value, true);
                             } else if (path === "systemcontrol" && this.path.length > 0 && !isNaN(this.path[this.path.length - 1])) {
                                 const modPath = this.path;
@@ -472,7 +478,7 @@ class Vaillant extends utils.Adapter {
                                 });
 
                                 if (this.node.name) {
-                                    adapter.setObjectNotExists(adapter.serialNr + "." + path + "." + modPath.join("."), {
+                                    await adapter.setObjectNotExistsAsync(adapter.serialNr + "." + path + "." + modPath.join("."), {
                                         type: "state",
                                         common: {
                                             name: this.node.name,
