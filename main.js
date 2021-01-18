@@ -100,6 +100,7 @@ class Vaillant extends utils.Adapter {
                         this.updateInterval = setInterval(() => {
                             this.updateValues();
                         }, this.config.interval * 60 * 1000);
+                        this.log.debug("Set update interval to: " + this.config.interval + "min");
                     })
                     .catch(() => {
                         this.log.error("facility failed");
@@ -114,6 +115,7 @@ class Vaillant extends utils.Adapter {
     }
 
     updateValues() {
+        this.log.debug("update values");
         this.cleanConfigurations()
             .then(async () => {
                 await this.sleep(5000);
@@ -237,6 +239,7 @@ class Vaillant extends utils.Adapter {
     }
     cleanConfigurations() {
         return new Promise((resolve) => {
+            this.log.debug("clean config");
             const pre = this.name + "." + this.instance;
             this.getStates(pre + ".*", (err, states) => {
                 const allIds = Object.keys(states);
@@ -344,6 +347,7 @@ class Vaillant extends utils.Adapter {
     }
     getMethod(url, path) {
         return new Promise((resolve, reject) => {
+            this.log.debug("get method: " + url + " " + path);
             if (this.isRelogin || this.adapterStopped) {
                 this.log.debug("Instance is relogining ignores: " + path);
                 resolve();
