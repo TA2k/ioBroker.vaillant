@@ -418,6 +418,7 @@ class Vaillant extends utils.Adapter {
                         resolve();
                         return;
                     }
+              
                     try {
                         const adapter = this;
                         traverse(body.body).forEach(function (value) {
@@ -438,6 +439,10 @@ class Vaillant extends utils.Adapter {
                                     modPath[0] = this.parent.parent.parent.node._id ? this.parent.parent.parent.node._id: modPath[0]
                                     
                                 }
+                                if (path==="livereport" && modPath.length == 2) {
+                                    modPath[0] = this.parent.node._id;
+                                    
+                                }
 
                                 if (path === "systemcontrol" && modPath[0].indexOf("parameters") !== -1 && modPath[1] === "name") {
                                     //add value field for parameters
@@ -453,6 +458,7 @@ class Vaillant extends utils.Adapter {
                                         native: {},
                                     });
                                 }
+                            
                                 if (path === "emf") {
                                     if (modPath[0].indexOf("reports") !== -1) {
                                         modPath[0] = this.parent.node.function + "_" + this.parent.node.energyType;
