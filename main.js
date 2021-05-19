@@ -433,6 +433,11 @@ class Vaillant extends utils.Adapter {
                                         modPath.splice(parentIndex + 1, 1);
                                     }
                                 });
+                                if (path==="livereport" && modPath.length >2) {
+                                    modPath[1] = this.parent.node._id;
+                                    modPath[0] = this.parent.parent.parent.node._id ? this.parent.parent.parent.node._id: modPath[0]
+                                    
+                                }
 
                                 if (path === "systemcontrol" && modPath[0].indexOf("parameters") !== -1 && modPath[1] === "name") {
                                     //add value field for parameters
