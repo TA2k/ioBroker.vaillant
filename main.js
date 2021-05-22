@@ -87,7 +87,12 @@ class Vaillant extends utils.Adapter {
                                                                 await this.sleep(10000);
                                                                 this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
                                                                     .catch(() => this.log.debug("Failed to get emf"))
-                                                                    .finally(() => {});
+                                                                    .finally(async () => {
+                                                                        await this.sleep(10000);
+                                                                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/hvacstate/v1/overview ", "hvacstate")
+                                                                            .catch(() => this.log.debug("Failed to get hvacstate"))
+                                                                            .finally(() => {});
+                                                                    });
                                                             });
                                                     });
                                             });
@@ -418,7 +423,7 @@ class Vaillant extends utils.Adapter {
                         resolve();
                         return;
                     }
-              
+
                     try {
                         const adapter = this;
                         traverse(body.body).forEach(function (value) {
@@ -434,14 +439,12 @@ class Vaillant extends utils.Adapter {
                                         modPath.splice(parentIndex + 1, 1);
                                     }
                                 });
-                                if (path==="livereport" && modPath.length >2) {
+                                if (path === "livereport" && modPath.length > 2) {
                                     modPath[1] = this.parent.node._id;
-                                    modPath[0] = this.parent.parent.parent.node._id ? this.parent.parent.parent.node._id: modPath[0]
-                                    
+                                    modPath[0] = this.parent.parent.parent.node._id ? this.parent.parent.parent.node._id : modPath[0];
                                 }
-                                if (path==="livereport" && modPath.length == 2) {
+                                if (path === "livereport" && modPath.length == 2) {
                                     modPath[0] = this.parent.node._id;
-                                    
                                 }
 
                                 if (path === "systemcontrol" && modPath[0].indexOf("parameters") !== -1 && modPath[1] === "name") {
@@ -458,7 +461,7 @@ class Vaillant extends utils.Adapter {
                                         native: {},
                                     });
                                 }
-                            
+
                                 if (path === "emf") {
                                     if (modPath[0].indexOf("reports") !== -1) {
                                         modPath[0] = this.parent.node.function + "_" + this.parent.node.energyType;
