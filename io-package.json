@@ -84,7 +84,8 @@
     "user": "",
     "password": "",
     "interval": 15,
-    "smartPhoneId": ""
+    "smartPhoneId": "",
+    "cleantype": false
   },
   "objects": [],
   "instanceObjects": [

@@ -89,9 +89,14 @@ class Vaillant extends utils.Adapter {
                                                                     .catch(() => this.log.debug("Failed to get emf"))
                                                                     .finally(async () => {
                                                                         await this.sleep(10000);
-                                                                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/hvacstate/v1/overview ", "hvacstate")
+                                                                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/hvacstate/v1/overview", "hvacstate")
                                                                             .catch(() => this.log.debug("Failed to get hvacstate"))
-                                                                            .finally(() => {});
+                                                                            .finally(async () => {
+                                                                                await this.sleep(10000);
+                                                                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/rbr/v1/rooms", "rooms")
+                                                                                    .catch(() => this.log.debug("Failed to get rooms"))
+                                                                                    .finally(() => {});
+                                                                            });
                                                                     });
                                                             });
                                                     });
@@ -142,7 +147,12 @@ class Vaillant extends utils.Adapter {
                                                 await this.sleep(20000);
                                                 this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
                                                     .catch(() => this.log.debug("Failed to get emf"))
-                                                    .finally(() => {});
+                                                    .finally(async () => {
+                                                        await this.sleep(10000);
+                                                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/rbr/v1/rooms", "rooms")
+                                                            .catch(() => this.log.debug("Failed to get rooms"))
+                                                            .finally(() => {});
+                                                    });
                                             });
                                     });
                             });
@@ -244,6 +254,11 @@ class Vaillant extends utils.Adapter {
     }
     cleanConfigurations() {
         return new Promise((resolve) => {
+            if (this.config.cleantype) {
+                this.log.debug("skip clean config");
+                resolve();
+                return;
+            }
             this.log.debug("clean config");
             const pre = this.name + "." + this.instance;
             this.getStates(pre + ".*", (err, states) => {
@@ -532,7 +547,7 @@ class Vaillant extends utils.Adapter {
             const idPath = id.split(".").splice(2).slice(0, 3);
             let path = [];
             let url = "";
-            const body = {};
+            let body = {};
             if (id.indexOf("configuration") !== -1) {
                 const idState = await this.getStateAsync(idPath.join(".") + "._id");
                 path = idArray.splice(4);
@@ -542,7 +557,13 @@ class Vaillant extends utils.Adapter {
                 path[0] = path[0].replace(/[0-9]/g, "");
                 path = path.join("/");
                 url = "https://smart.vaillant.com/mobile/api/v4/facilities/" + this.serialNr + "/systemcontrol/v1/" + path;
+                if (idPath[1] === "rooms") {
+                    let roomId = idPath[2].replace("rooms", "");
+                    roomId = parseInt(roomId) - 1;
+                    url = "https://smart.vaillant.com/mobile/api/v4/facilities/" + this.serialNr + "/rbr/v1/rooms/" + roomId + "/configuration/quickVeto";
+                }
                 body[action] = val;
+                body["duration"] = 180;
             } else {
                 const pathState = await this.getStateAsync(idPath.join(".") + ".link.resourceLink");
                 if (pathState) {
