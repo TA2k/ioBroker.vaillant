@@ -1,8 +1,11 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.0.13",
+    "version": "0.0.14",
     "news": {
+      "0.0.14": {
+        "en": "add rooms support"
+      },
       "0.0.13": {
         "en": "fix livereport order"
       },
