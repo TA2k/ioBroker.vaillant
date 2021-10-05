@@ -75,6 +75,8 @@
     "loglevel": "info",
     "mode": "daemon",
     "type": "climate-control",
+    "connectionType": "cloud",
+    "dataSource": "poll",
     "compact": true,
     "materialize": true,
     "dependencies": [
