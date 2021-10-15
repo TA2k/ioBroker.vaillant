@@ -563,7 +563,7 @@ class Vaillant extends utils.Adapter {
                     url = "https://smart.vaillant.com/mobile/api/v4/facilities/" + this.serialNr + "/rbr/v1/rooms/" + roomId + "/configuration/quickVeto";
                 }
                 body[action] = val;
-                body["duration"] = 180;
+                // body["duration"] = 180;
             } else {
                 const pathState = await this.getStateAsync(idPath.join(".") + ".link.resourceLink");
                 if (pathState) {
