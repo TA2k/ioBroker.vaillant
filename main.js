@@ -547,7 +547,7 @@ class Vaillant extends utils.Adapter {
             const idPath = id.split(".").splice(2).slice(0, 3);
             let path = [];
             let url = "";
-            let body = {};
+            const body = {};
             if (id.indexOf("configuration") !== -1) {
                 const idState = await this.getStateAsync(idPath.join(".") + "._id");
                 path = idArray.splice(4);
@@ -589,11 +589,13 @@ class Vaillant extends utils.Adapter {
                     if (err || (resp && resp.statusCode >= 400)) {
                         this.log.error(err);
                         this.log.error(JSON.stringify(body));
+                        url && this.log.error(url);
+                        body && this.log.error(JSON.stringify(body));
                         reject();
                         return;
                     }
                     try {
-                        // this.log.info(body);
+                        this.log.debug(JSON.stringify(body));
                         resolve();
                     } catch (error) {
                         this.log.error(error);
@@ -654,7 +656,9 @@ class Vaillant extends utils.Adapter {
         if (state) {
             if (!state.ack) {
                 if (id.indexOf("configuration") !== -1 || id.indexOf("parameterValue") !== -1) {
-                    this.setMethod(id, state.val);
+                    this.setMethod(id, state.val).catch(() => {
+                        this.log.error("Failed to set: " + id + " to: " + state.val);
+                    });
                 }
             }
         } else {
