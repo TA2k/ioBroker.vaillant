@@ -68,40 +68,37 @@ class Vaillant extends utils.Adapter {
                 this.getFacility()
                     .then(() => {
                         this.cleanConfigurations()
-                            .then(() => {
-                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status")
-                                    .catch(() => this.log.debug("Failed to get status"))
-                                    .finally(async () => {
-                                        await this.sleep(10000);
-                                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol")
-                                            .catch(() => this.log.debug("Failed to get systemcontrol"))
-                                            .finally(async () => {
-                                                await this.sleep(10000);
-                                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport")
-                                                    .catch(() => this.log.debug("Failed to get livereport"))
-                                                    .finally(async () => {
-                                                        await this.sleep(10000);
-                                                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine")
-                                                            .catch(() => this.log.debug("Failed to get spine"))
-                                                            .finally(async () => {
-                                                                await this.sleep(10000);
-                                                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
-                                                                    .catch(() => this.log.debug("Failed to get emf"))
-                                                                    .finally(async () => {
-                                                                        await this.sleep(10000);
-                                                                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/hvacstate/v1/overview", "hvacstate")
-                                                                            .catch(() => this.log.debug("Failed to get hvacstate"))
-                                                                            .finally(async () => {
-                                                                                await this.sleep(10000);
-                                                                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/rbr/v1/rooms", "rooms")
-                                                                                    .catch(() => this.log.debug("Failed to get rooms"))
-                                                                                    .finally(() => {});
-                                                                            });
-                                                                    });
-                                                            });
-                                                    });
-                                            });
-                                    });
+                            .then(async () => {
+                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").catch(() => this.log.debug("Failed to get status"));
+
+                                await this.sleep(10000);
+                                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").catch(() =>
+                                    this.log.debug("Failed to get systemcontrol")
+                                );
+                                await this.sleep(10000);
+                                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/tli/v1", "systemcontrol/tli").catch(() =>
+                                    this.log.debug("Failed to get tli systemcontrol")
+                                );
+                                await this.sleep(10000);
+                                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport").catch(() => this.log.debug("Failed to get livereport"));
+
+                                await this.sleep(10000);
+                                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine").catch(() =>
+                                    this.log.debug("Failed to get spine")
+                                );
+
+                                await this.sleep(10000);
+                                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf").catch(() => this.log.debug("Failed to get emf"));
+
+                                await this.sleep(10000);
+                                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/hvacstate/v1/overview", "hvacstate").catch(() =>
+                                    this.log.debug("Failed to get hvacstate")
+                                );
+
+                                await this.sleep(10000);
+                                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/rbr/v1/rooms", "rooms")
+                                    .catch(() => this.log.debug("Failed to get rooms"))
+                                    .finally(() => {});
                             })
                             .catch(() => {
                                 this.log.error("clean configuration failed");
@@ -129,35 +126,29 @@ class Vaillant extends utils.Adapter {
         this.cleanConfigurations()
             .then(async () => {
                 await this.sleep(5000);
-                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status")
-                    .catch(() => this.log.debug("Failed to get status"))
-                    .finally(async () => {
-                        await this.sleep(20000);
-                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol")
-                            .catch(() => this.log.debug("Failed to get systemcontrol"))
-                            .finally(async () => {
-                                await this.sleep(20000);
-                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport")
-                                    .catch(() => this.log.debug("Failed to get livereport"))
-                                    .finally(async () => {
-                                        await this.sleep(20000);
-                                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine")
-                                            .catch(() => this.log.debug("Failed to get spine"))
-                                            .finally(async () => {
-                                                await this.sleep(20000);
-                                                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf")
-                                                    .catch(() => this.log.debug("Failed to get emf"))
-                                                    .finally(async () => {
-                                                        await this.sleep(10000);
-                                                        this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/rbr/v1/rooms", "rooms")
-                                                            .catch(() => this.log.debug("Failed to get rooms"))
-                                                            .finally(() => {});
-                                                    });
-                                            });
-                                    });
-                            });
-                    });
+                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").catch(() => this.log.debug("Failed to get status"));
+
+                await this.sleep(20000);
+                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").catch(() => this.log.debug("Failed to get systemcontrol"));
+
+                await this.sleep(20000);
+                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/tli/v1", "systemcontrol/tli").catch(() =>
+                    this.log.debug("Failed to get tli systemcontrol")
+                );
+
+                await this.sleep(20000);
+                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport").catch(() => this.log.debug("Failed to get livereport"));
+
+                await this.sleep(20000);
+                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine").catch(() => this.log.debug("Failed to get spine"));
+
+                await this.sleep(20000);
+                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf").catch(() => this.log.debug("Failed to get emf"));
+
+                await this.sleep(10000);
+                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/rbr/v1/rooms", "rooms").catch(() => this.log.debug("Failed to get rooms"));
             })
+
             .catch(() => {
                 this.log.error("clean configuration failed");
             });
@@ -547,7 +538,7 @@ class Vaillant extends utils.Adapter {
             const idPath = id.split(".").splice(2).slice(0, 3);
             let path = [];
             let url = "";
-            const body = {};
+            let body = {};
             if (id.indexOf("configuration") !== -1) {
                 const idState = await this.getStateAsync(idPath.join(".") + "._id");
                 path = idArray.splice(4);
@@ -556,7 +547,7 @@ class Vaillant extends utils.Adapter {
                 }
                 path[0] = path[0].replace(/[0-9]/g, "");
                 path = path.join("/");
-                url = "https://smart.vaillant.com/mobile/api/v4/facilities/" + this.serialNr + "/systemcontrol/v1/" + path;
+                url = "https://smart.vaillant.com/mobile/api/v4/facilities/" + this.serialNr + "/" + idPath[1] + "/v1/" + path;
                 if (idPath[1] === "rooms") {
                     let roomId = idPath[2].replace("rooms", "");
                     roomId = parseInt(roomId) - 1;
