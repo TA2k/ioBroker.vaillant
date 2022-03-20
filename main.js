@@ -38,6 +38,7 @@ class Vaillant extends utils.Adapter {
         this.serialNr = "";
         this.adapterStopped = false;
         this.isSpineActive = true;
+        this.reports = {};
     }
 
     /**
@@ -89,6 +90,7 @@ class Vaillant extends utils.Adapter {
 
                                 await this.sleep(10000);
                                 await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf").catch(() => this.log.debug("Failed to get emf"));
+                                this.log.debug(JSON.stringify(this.reports));
 
                                 await this.sleep(10000);
                                 await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/hvacstate/v1/overview", "hvacstate").catch(() =>
@@ -99,6 +101,8 @@ class Vaillant extends utils.Adapter {
                                 await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/rbr/v1/rooms", "rooms")
                                     .catch(() => this.log.debug("Failed to get rooms"))
                                     .finally(() => {});
+                                await this.sleep(10000);
+                                await this.receiveReports();
                             })
                             .catch(() => {
                                 this.log.error("clean configuration failed");
@@ -147,6 +151,9 @@ class Vaillant extends utils.Adapter {
 
                 await this.sleep(10000);
                 await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/rbr/v1/rooms", "rooms").catch(() => this.log.debug("Failed to get rooms"));
+
+                await this.sleep(20000);
+                await this.receiveReports();
             })
 
             .catch(() => {
@@ -370,6 +377,9 @@ class Vaillant extends utils.Adapter {
                 resolve();
                 return;
             }
+            if (path === "emf") {
+                this.reports = {};
+            }
             this.log.debug("Get: " + path);
 
             url = url.replace("/$serial/", "/" + this.serialNr + "/");
@@ -471,6 +481,13 @@ class Vaillant extends utils.Adapter {
                                 if (path === "emf") {
                                     if (modPath[0].indexOf("reports") !== -1) {
                                         modPath[0] = this.parent.node.function + "_" + this.parent.node.energyType;
+                                        if (this.parent.parent && this.parent.parent.parent && this.parent.parent.parent.node.id) {
+                                            const id = this.parent.parent.parent.node.id;
+                                            if (!adapter.reports[id]) {
+                                                adapter.reports[id] = [];
+                                            }
+                                            adapter.reports[id].push({ function: this.parent.node.function, energyType: this.parent.node.energyType });
+                                        }
                                     }
                                 }
 
@@ -480,7 +497,7 @@ class Vaillant extends utils.Adapter {
                                         common: {
                                             name: this.key,
                                             role: "indicator",
-                                            type: typeof value,
+                                            type: value ? typeof value : "mixed",
                                             write: true,
                                             read: true,
                                         },
@@ -620,6 +637,30 @@ class Vaillant extends utils.Adapter {
             ms = 0;
         }
         return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+    async receiveReports() {
+        const date = new Date().toISOString().split("T")[0];
+        this.log.debug(date);
+        for (const id of Object.keys(this.reports)) {
+            this.log.debug(id);
+            this.log.debug(this.reports[id]);
+            for (const report of this.reports[id]) {
+                await this.sleep(2000);
+                this.log.debug(report);
+                await this.getMethod(
+                    "https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/" +
+                        id +
+                        "?energyType=" +
+                        report.energyType +
+                        "&function=" +
+                        report.function +
+                        "&offset=6&start=" +
+                        date +
+                        "&timeRange=DAY",
+                    "reports." + id + "." + report.energyType + "." + report.function
+                );
+            }
+        }
     }
     /**
      * Is called when adapter shuts down - callback has to be called under any circumstances!
