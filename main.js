@@ -9,6 +9,7 @@
 const utils = require("@iobroker/adapter-core");
 const request = require("request");
 const traverse = require("traverse");
+const Json2iob = require("./lib/json2iob");
 
 class Vaillant extends utils.Adapter {
     /**
@@ -23,6 +24,7 @@ class Vaillant extends utils.Adapter {
         this.on("stateChange", this.onStateChange.bind(this));
         this.on("unload", this.onUnload.bind(this));
 
+        this.json2iob = new Json2iob(this);
         this.jar = request.jar();
         this.updateInterval = null;
         this.reauthInterval = null;
@@ -70,38 +72,55 @@ class Vaillant extends utils.Adapter {
                     .then(() => {
                         this.cleanConfigurations()
                             .then(async () => {
+                                this.log.info("Receiving first time status");
                                 this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").catch(() => this.log.debug("Failed to get status"));
 
                                 await this.sleep(10000);
+
+                                this.log.info("Receiving first time systemcontrol");
                                 await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").catch(() =>
                                     this.log.debug("Failed to get systemcontrol")
                                 );
                                 await this.sleep(10000);
+
+                                this.log.info("Receiving first time systemcontrol tli");
                                 await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/tli/v1", "systemcontrol/tli").catch(() =>
                                     this.log.debug("Failed to get tli systemcontrol")
                                 );
                                 await this.sleep(10000);
+
+                                this.log.info("Receiving first time livereport");
                                 await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport").catch(() => this.log.debug("Failed to get livereport"));
 
                                 await this.sleep(10000);
+
+                                this.log.info("Receiving first time PVMetering");
                                 await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine").catch(() =>
                                     this.log.debug("Failed to get spine")
                                 );
 
                                 await this.sleep(10000);
+
+                                this.log.info("Receiving first time emf devices");
                                 await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf").catch(() => this.log.debug("Failed to get emf"));
                                 this.log.debug(JSON.stringify(this.reports));
 
                                 await this.sleep(10000);
+
+                                this.log.info("Receiving first time hvac state");
                                 await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/hvacstate/v1/overview", "hvacstate").catch(() =>
                                     this.log.debug("Failed to get hvacstate")
                                 );
 
                                 await this.sleep(10000);
+
+                                this.log.info("Receiving first time rooms");
                                 await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/rbr/v1/rooms", "rooms")
                                     .catch(() => this.log.debug("Failed to get rooms"))
                                     .finally(() => {});
                                 await this.sleep(10000);
+
+                                this.log.info("Receiving first time reports");
                                 await this.receiveReports();
                             })
                             .catch(() => {
@@ -310,6 +329,7 @@ class Vaillant extends utils.Adapter {
                         reject();
                         return;
                     }
+                    this.log.info(body.body.facilitiesList.length + " facilities found");
                     const facility = body.body.facilitiesList[0];
                     this.serialNr = facility.serialNumber;
                     await this.setObjectNotExistsAsync(facility.serialNumber, {
@@ -439,7 +459,11 @@ class Vaillant extends utils.Adapter {
                         resolve();
                         return;
                     }
-
+                    if (path.indexOf("reports.") !== -1) {
+                        this.json2iob.parse(this.serialNr + "." + path, body.body, { forceIndex: true, channelName: "Reports" });
+                        resolve();
+                        return;
+                    }
                     try {
                         const adapter = this;
                         traverse(body.body).forEach(function (value) {
