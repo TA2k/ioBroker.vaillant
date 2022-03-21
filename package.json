@@ -9,6 +9,7 @@
   "bundleDependencies": false,
   "dependencies": {
     "@iobroker/adapter-core": "^2.6.0",
+    "json-bigint": "^1.0.0",
     "request": "^2.88.2",
     "traverse": "^0.6.6"
   },
