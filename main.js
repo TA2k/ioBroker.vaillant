@@ -119,9 +119,10 @@ class Vaillant extends utils.Adapter {
                                     .catch(() => this.log.debug("Failed to get rooms"))
                                     .finally(() => {});
                                 await this.sleep(10000);
-
-                                this.log.info("Receiving first time reports");
-                                await this.receiveReports();
+                                if (this.config.fetchReports) {
+                                    this.log.info("Receiving first time reports");
+                                    await this.receiveReports();
+                                }
                             })
                             .catch(() => {
                                 this.log.error("clean configuration failed");
@@ -170,9 +171,10 @@ class Vaillant extends utils.Adapter {
 
                 await this.sleep(10000);
                 await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/rbr/v1/rooms", "rooms").catch(() => this.log.debug("Failed to get rooms"));
-
-                await this.sleep(20000);
-                await this.receiveReports();
+                if (this.config.fetchReports) {
+                    await this.sleep(20000);
+                    await this.receiveReports();
+                }
             })
 
             .catch(() => {
@@ -579,7 +581,7 @@ class Vaillant extends utils.Adapter {
             const idPath = id.split(".").splice(2).slice(0, 3);
             let path = [];
             let url = "";
-            let body = {};
+            const body = {};
             if (id.indexOf("configuration") !== -1) {
                 const idState = await this.getStateAsync(idPath.join(".") + "._id");
                 path = idArray.splice(4);
