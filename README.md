@@ -23,9 +23,9 @@ Configuration können geändert werde in dem sie unter dem Unterpunkt configurat
 ## **Beispiel:**
 **Warmwasser**: vaillant.0.serialnummer.systemcontrol/tli.dhw.hotwater.configuration.hotwater_temperature_setpoint
 **Heizung**:
-Erst auf MANUELL
+Erst auf MANUAL
 vaillant.0.serialnummber.systemcontrol/tli.zones03.heating.configuration.operation_mode
-MANUELL
+MANUAL
 Dann die Temperatur
 vaillant.0.serial.systemcontrol/tli.zones03.heating.configuration.manual_mode_temperature_setpoint
 Und am Ende operation_mode auf TIME_CONTROLLED
