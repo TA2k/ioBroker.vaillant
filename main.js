@@ -615,7 +615,7 @@ class Vaillant extends utils.Adapter {
           url = "https://smart.vaillant.com/mobile/api/v4/facilities/" + this.serialNr + "/rbr/v1/rooms/" + roomId + "/configuration/quickVeto";
         }
         body[action] = val;
-        if (val === null || val === undefined) {
+        if ((val = "" || val === null || val === undefined)) {
           body = null;
         }
 
