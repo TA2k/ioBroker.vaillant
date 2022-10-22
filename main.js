@@ -612,7 +612,7 @@ class Vaillant extends utils.Adapter {
         if (idPath[1] === "rooms") {
           let roomId = idPath[2].replace("rooms", "");
           roomId = parseInt(roomId) - 1;
-          url = "https://smart.vaillant.com/mobile/api/v4/facilities/" + this.serialNr + "/rbr/v1/rooms/" + roomId + "/configuration/quickVeto";
+          url = "https://smart.vaillant.com/mobile/api/v4/facilities/" + this.serialNr + "/rbr/v1/rooms/" + roomId + "/configuration/" + action;
         }
         body[action] = val;
         if ((val = "" || val === null || val === undefined)) {
@@ -631,7 +631,7 @@ class Vaillant extends utils.Adapter {
         }
       }
       this.log.debug(url);
-      this.log.debug(body);
+      this.log.debug(JSON.stringify(body));
       request.put(
         {
           url: url,

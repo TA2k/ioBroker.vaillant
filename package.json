@@ -8,10 +8,10 @@
   },
   "bundleDependencies": false,
   "dependencies": {
-    "@iobroker/adapter-core": "^2.6.2",
+    "@iobroker/adapter-core": "^2.6.7",
     "json-bigint": "^1.0.0",
     "request": "^2.88.2",
-    "traverse": "^0.6.6"
+    "traverse": "^0.6.7"
   },
   "deprecated": false,
   "description": "Vaillant multiMatic VR900/VR920 Adapter",
@@ -19,19 +19,19 @@
     "@iobroker/testing": "^4.1.0",
     "@types/chai": "^4.3.3",
     "@types/chai-as-promised": "^7.1.5",
-    "@types/mocha": "^9.1.1",
-    "@types/node": "^18.7.16",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^18.11.3",
     "@types/proxyquire": "^1.3.28",
     "@types/sinon": "^10.0.13",
     "@types/sinon-chai": "^3.2.8",
     "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
-    "eslint": "^8.23.0",
-    "mocha": "^10.0.0",
+    "eslint": "^8.26.0",
+    "mocha": "^10.1.0",
     "proxyquire": "^2.1.3",
-    "sinon": "^14.0.0",
+    "sinon": "^14.0.1",
     "sinon-chai": "^3.7.0",
-    "typescript": "~4.8.3"
+    "typescript": "~4.8.4"
   },
   "homepage": "https://github.com/TA2k/ioBroker.vaillant",
   "keywords": [
