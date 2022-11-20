@@ -227,7 +227,7 @@ class Vaillant extends utils.Adapter {
             this.log.error("Failed to login");
             this.log.error(err);
             this.log.error(JSON.stringify(body));
-            this.log.error(resp.statusCode);
+            resp && this.log.error(resp.statusCode);
             reject();
             return;
           }
