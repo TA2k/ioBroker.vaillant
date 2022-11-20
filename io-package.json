@@ -1,8 +1,11 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.0.17",
+    "version": "0.0.18",
     "news": {
+      "0.0.18": {
+        "en": "fix login in error case"
+      },
       "0.0.17": {
         "en": "allow empty values in remote control"
       },
