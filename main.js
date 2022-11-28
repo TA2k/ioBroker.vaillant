@@ -98,7 +98,7 @@ class Vaillant extends utils.Adapter {
       }
       this.refreshTokenInterval = setInterval(() => {
         this.refreshToken();
-      }, this.session.expires_in || 3600 * 1000);
+      }, (this.session.expires_in || 3600) * 1000);
     } else {
       this.login()
         .then(() => {
