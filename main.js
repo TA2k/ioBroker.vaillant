@@ -335,18 +335,18 @@ class Vaillant extends utils.Adapter {
             */
             const remoteArray = [
               { command: "Refresh", name: "True = Refresh" },
-              { command: "setSwitch", name: "True = Switch On, False = Switch Off" },
-              { command: "domesticHotWater/255/boost", name: "True = Switch On, False = Switch Off" },
-              { command: "holiday", name: "True = Switch On, False = Switch Off" },
-              {
-                command: "desiredRoomTemperatureSetpoint",
-                name: "set Room Temperature",
-                type: "number",
-                def: 21,
-                role: "level.temperature",
-              },
-              { command: "duration", name: "Duration Room Temperature", type: "number", def: 3, role: "level" },
-              { command: "zone", name: "Zone Room Temperature", type: "number", def: 0, role: "level" },
+              // { command: "setSwitch", name: "True = Switch On, False = Switch Off" },
+              // { command: "domesticHotWater/255/boost", name: "True = Switch On, False = Switch Off" },
+              // { command: "holiday", name: "True = Switch On, False = Switch Off" },
+              // {
+              //   command: "desiredRoomTemperatureSetpoint",
+              //   name: "set Room Temperature",
+              //   type: "number",
+              //   def: 21,
+              //   role: "level.temperature",
+              // },
+              // { command: "duration", name: "Duration Room Temperature", type: "number", def: 3, role: "level" },
+              // { command: "zone", name: "Zone Room Temperature", type: "number", def: 0, role: "level" },
             ];
             remoteArray.forEach((remote) => {
               this.setObjectNotExists(id + ".remote." + remote.command, {
@@ -355,7 +355,7 @@ class Vaillant extends utils.Adapter {
                   name: remote.name || "",
                   type: remote.type || "boolean",
                   role: remote.role || "boolean",
-                  def: remote.def || false,
+                  def: remote.def != null ? remote.def : false,
                   write: true,
                   read: true,
                 },
