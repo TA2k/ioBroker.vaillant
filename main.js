@@ -354,7 +354,7 @@ class Vaillant extends utils.Adapter {
                 common: {
                   name: remote.name || "",
                   type: remote.type || "boolean",
-                  role: remote.role || "boolean",
+                  role: remote.role || "button",
                   def: remote.def != null ? remote.def : false,
                   write: true,
                   read: true,
@@ -362,7 +362,7 @@ class Vaillant extends utils.Adapter {
                 native: {},
               });
             });
-            this.json2iob.parse(id, device, { forceIndex: true });
+            this.json2iob.parse(id, device, { forceIndex: true, write: true });
           }
         }
       })
@@ -398,7 +398,7 @@ class Vaillant extends utils.Adapter {
             //   id += "." + device.subDeviceNo;
             // }
 
-            this.json2iob.parse(id, device, { forceIndex: true });
+            this.json2iob.parse(id, device, { forceIndex: true, write: true });
           }
         }
       })
@@ -1037,9 +1037,56 @@ class Vaillant extends utils.Adapter {
    * @param {string} id
    * @param {ioBroker.State | null | undefined} state
    */
-  onStateChange(id, state) {
+  async onStateChange(id, state) {
     if (state) {
       if (!state.ack) {
+        if (this.config.myv) {
+          const deviceId = id.split(".")[2];
+
+          if (id.split(".")[4] === "Refresh") {
+            this.updateMyvDevices();
+            return;
+          }
+          let data = {};
+          let method = "POST";
+          const command = id.split(".").pop();
+          let url = "";
+          if (id.split(".")[5].includes("zones")) {
+            let zoneId = Number(id.split(".")[5].replace("zones", "")) - 1;
+            this.log.debug("zoneId: " + zoneId);
+            this.log.debug("deviceId: " + deviceId);
+            method = "PATCH";
+            data[command] = state.val;
+            url =
+              "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" + deviceId + "/zones/" + zoneId + "/quickVeto";
+          }
+          await this.requestClient({
+            method: method,
+            url: url,
+            headers: {
+              Accept: "application/json, text/plain, */*",
+              Authorization: "Bearer " + this.session.access_token,
+
+              "x-app-identifier": "VAILLANT",
+              "Accept-Language": "de-de",
+              "Content-Type": "application/json",
+              "x-client-locale": "de-DE",
+              "x-idm-identifier": "OKTA",
+              "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
+              "User-Agent": "myVAILLANT/11835 CFNetwork/1240.0.4 Darwin/20.6.0",
+              Connection: "keep-alive",
+            },
+            data: JSON.stringify(data),
+          })
+            .then(async (res) => {
+              this.log.info(JSON.stringify(res.data));
+            })
+            .catch((error) => {
+              this.log.error(error);
+              error.response && this.log.error(JSON.stringify(error.response.data));
+            });
+          return;
+        }
         if (id.indexOf("configuration") !== -1 || id.indexOf("parameterValue") !== -1) {
           this.setMethod(id, state.val).catch(() => {
             this.log.error("Failed to set: " + id + " to: " + state.val);
