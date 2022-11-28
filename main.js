@@ -212,8 +212,8 @@ class Vaillant extends utils.Adapter {
     if (!sessionToken) {
       return;
     }
-    const nonce = this.makeid(43);
-    const state = this.makeid(43);
+    const nonce = this.randomString(43);
+    const state = this.randomString(43);
     const queryString = qs.stringify({
       nonce: nonce,
       sessionToken: sessionToken,
@@ -964,6 +964,15 @@ class Vaillant extends utils.Adapter {
 
     return "multimatic_" + result;
   }
+  randomString(length = 202) {
+    let result = "";
+    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    const charactersLength = characters.length;
+    for (let i = 0; i < length; i++) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+  }
   sleep(ms) {
     if (this.adapterStopped) {
       ms = 0;
@@ -973,11 +982,11 @@ class Vaillant extends utils.Adapter {
   getCodeChallenge() {
     let hash = "";
     let result = "";
-    const chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-";
+    const chars = "0123456789abcdef";
     result = "";
-    for (let i = 171; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
+    for (let i = 64; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
     hash = crypto.createHash("sha256").update(result).digest("base64");
-    hash = hash.replace(/\+/g, "-").replace(/\//g, "_").replace(/==/g, "=");
+    hash = hash.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 
     return [result, hash];
   }
