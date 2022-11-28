@@ -10,6 +10,11 @@ const utils = require("@iobroker/adapter-core");
 const request = require("request");
 const traverse = require("traverse");
 const Json2iob = require("./lib/json2iob");
+const axios = require("axios").default;
+const tough = require("tough-cookie");
+const crypto = require("crypto");
+const qs = require("qs");
+const { HttpsCookieAgent } = require("http-cookie-agent/http");
 
 class Vaillant extends utils.Adapter {
   /**
@@ -24,7 +29,17 @@ class Vaillant extends utils.Adapter {
     this.on("stateChange", this.onStateChange.bind(this));
     this.on("unload", this.onUnload.bind(this));
 
+    this.deviceArray = [];
     this.json2iob = new Json2iob(this);
+    this.cookieJar = new tough.CookieJar();
+    this.requestClient = axios.create({
+      withCredentials: true,
+      httpsAgent: new HttpsCookieAgent({
+        cookies: {
+          jar: this.cookieJar,
+        },
+      }),
+    });
     this.jar = request.jar();
     this.updateInterval = null;
     this.reauthInterval = null;
@@ -35,6 +50,13 @@ class Vaillant extends utils.Adapter {
       "User-Agent": "okhttp/3.10.0",
       "Content-Type": "application/json; charset=UTF-8",
       "Accept-Encoding": "gzip",
+    };
+    this.myvHeader = {
+      accept: "application/json",
+      "content-type": "application/json",
+      "user-agent": "myVAILLANT/11835 CFNetwork/1240.0.4 Darwin/20.6.0",
+      "x-okta-user-agent-extended": "okta-auth-js/5.4.1 okta-react-native/2.7.0 react-native/>=0.70.1 ios/14.8 nodejs/undefined",
+      "accept-language": "de-de",
     };
     this.atoken = "";
     this.serialNr = "";
@@ -65,92 +87,354 @@ class Vaillant extends utils.Adapter {
     }
     // Reset the connection indicator during startup
     this.setState("info.connection", false, true);
-    this.login()
-      .then(() => {
-        this.setState("info.connection", true, true);
-        this.getFacility()
-          .then(() => {
-            this.cleanConfigurations()
-              .then(async () => {
-                this.log.info("Receiving first time status");
-                this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").catch(() =>
-                  this.log.debug("Failed to get status")
-                );
+    if (this.config.myv) {
+      await this.myvLogin();
+      if (this.session.access_token) {
+        await this.getMyvDeviceList();
+        await this.updateMyvDevices();
+        this.updateInterval = setInterval(async () => {
+          await this.updateMyvDevices();
+        }, this.config.interval * 60 * 1000);
+      }
+      this.refreshTokenInterval = setInterval(() => {
+        this.refreshToken();
+      }, this.session.expires_in || 3600 * 1000);
+    } else {
+      this.login()
+        .then(() => {
+          this.setState("info.connection", true, true);
+          this.getFacility()
+            .then(() => {
+              this.cleanConfigurations()
+                .then(async () => {
+                  this.log.info("Receiving first time status");
+                  this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/system/v1/status", "status").catch(() =>
+                    this.log.debug("Failed to get status")
+                  );
 
-                await this.sleep(10000);
+                  await this.sleep(10000);
 
-                this.log.info("Receiving first time systemcontrol");
-                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").catch(() =>
-                  this.log.debug("Failed to get systemcontrol")
-                );
-                await this.sleep(10000);
+                  this.log.info("Receiving first time systemcontrol");
+                  await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/v1", "systemcontrol").catch(() =>
+                    this.log.debug("Failed to get systemcontrol")
+                  );
+                  await this.sleep(10000);
 
-                this.log.info("Receiving first time systemcontrol tli");
-                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/tli/v1", "systemcontrol/tli").catch(
-                  () => this.log.debug("Failed to get tli systemcontrol")
-                );
-                await this.sleep(10000);
+                  this.log.info("Receiving first time systemcontrol tli");
+                  await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/systemcontrol/tli/v1", "systemcontrol/tli").catch(
+                    () => this.log.debug("Failed to get tli systemcontrol")
+                  );
+                  await this.sleep(10000);
 
-                this.log.info("Receiving first time livereport");
-                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport").catch(() =>
-                  this.log.debug("Failed to get livereport")
-                );
+                  this.log.info("Receiving first time livereport");
+                  await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/livereport/v1", "livereport").catch(() =>
+                    this.log.debug("Failed to get livereport")
+                  );
 
-                await this.sleep(10000);
+                  await this.sleep(10000);
 
-                this.log.info("Receiving first time PVMetering");
-                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine").catch(
-                  () => this.log.debug("Failed to get spine")
-                );
+                  this.log.info("Receiving first time PVMetering");
+                  await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/spine/v1/currentPVMeteringInfo", "spine").catch(
+                    () => this.log.debug("Failed to get spine")
+                  );
 
-                await this.sleep(10000);
+                  await this.sleep(10000);
 
-                this.log.info("Receiving first time emf devices");
-                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf").catch(() =>
-                  this.log.debug("Failed to get emf")
-                );
-                this.log.debug(JSON.stringify(this.reports));
+                  this.log.info("Receiving first time emf devices");
+                  await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf").catch(() =>
+                    this.log.debug("Failed to get emf")
+                  );
+                  this.log.debug(JSON.stringify(this.reports));
 
-                await this.sleep(10000);
+                  await this.sleep(10000);
 
-                this.log.info("Receiving first time hvac state");
-                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/hvacstate/v1/overview", "hvacstate").catch(() =>
-                  this.log.debug("Failed to get hvacstate")
-                );
+                  this.log.info("Receiving first time hvac state");
+                  await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/hvacstate/v1/overview", "hvacstate").catch(() =>
+                    this.log.debug("Failed to get hvacstate")
+                  );
 
-                await this.sleep(10000);
+                  await this.sleep(10000);
 
-                this.log.info("Receiving first time rooms");
-                await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/rbr/v1/rooms", "rooms")
-                  .catch(() => this.log.debug("Failed to get rooms"))
-                  .finally(() => {});
-                await this.sleep(10000);
-                if (this.config.fetchReports) {
-                  this.log.info("Receiving first time reports");
-                  await this.receiveReports();
-                }
-              })
-              .catch(() => {
-                this.log.error("clean configuration failed");
-              });
+                  this.log.info("Receiving first time rooms");
+                  await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/rbr/v1/rooms", "rooms")
+                    .catch(() => this.log.debug("Failed to get rooms"))
+                    .finally(() => {});
+                  await this.sleep(10000);
+                  if (this.config.fetchReports) {
+                    this.log.info("Receiving first time reports");
+                    await this.receiveReports();
+                  }
+                })
+                .catch(() => {
+                  this.log.error("clean configuration failed");
+                });
 
-            this.updateInterval = setInterval(() => {
-              this.updateValues();
-            }, this.config.interval * 60 * 1000);
-            this.log.debug("Set update interval to: " + this.config.interval + "min");
-          })
-          .catch(() => {
-            this.log.error("facility failed");
-          });
-      })
-      .catch(() => {
-        this.log.error("Login failed");
-      });
-
+              this.updateInterval = setInterval(() => {
+                this.updateValues();
+              }, this.config.interval * 60 * 1000);
+              this.log.debug("Set update interval to: " + this.config.interval + "min");
+            })
+            .catch(() => {
+              this.log.error("facility failed");
+            });
+        })
+        .catch(() => {
+          this.log.error("Login failed");
+        });
+    }
     // in this template all states changes inside the adapters namespace are subscribed
     this.subscribeStates("*");
   }
+  async myvLogin() {
+    let [code_verifier, codeChallenge] = this.getCodeChallenge();
+    const sessionToken = await this.requestClient({
+      method: "post",
+      url: "https://vaillant-prod.okta.com/api/v1/authn",
+      headers: this.myvHeader,
+      data: JSON.stringify({
+        username: this.config.user,
+        password: this.config.password,
+      }),
+    })
+      .then((res) => {
+        this.log.debug(JSON.stringify(res.data));
+        if (res.data.sessionToken) {
+          return res.data.sessionToken;
+        } else {
+          this.log.error("Login failed no sessionToken");
+          return "";
+        }
+      })
+      .catch((error) => {
+        this.log.error(error);
+        error.response && this.log.error(JSON.stringify(error.response.data));
+      });
+    if (!sessionToken) {
+      return;
+    }
+    const nonce = this.makeid(43);
+    const state = this.makeid(43);
+    const queryString = qs.stringify({
+      nonce: nonce,
+      sessionToken: sessionToken,
+      response_type: "code",
+      code_challenge_method: "S256",
+      scope: "openid profile offline_access",
+      code_challenge: codeChallenge,
+      redirect_uri: "com.okta.vaillant-prod:/callback",
+      client_id: "0oarllti4egHi7Nwx4x6",
+      state: state,
+    });
+    const response = await this.requestClient({
+      method: "get",
+      url: "https://vaillant-prod.okta.com/oauth2/default/v1/authorize?" + queryString,
+      headers: {
+        accept: "application/json",
+        "content-type": "application/x-www-form-urlencoded",
+        "user-agent": "myVAILLANT/11835 CFNetwork/1240.0.4 Darwin/20.6.0",
+        "accept-language": "de-de",
+      },
+    })
+      .then((res) => {
+        this.log.debug(JSON.stringify(res.data));
+        this.log.error("Login failed no response code");
+        return {};
+      })
+      .catch((error) => {
+        if (error && error.message.includes("Unsupported protocol")) {
+          return qs.parse(error.request._options.path.split("?")[1]);
+        }
+        this.log.error(error);
+        error.response && this.log.error(JSON.stringify(error.response.data));
+      });
+    if (!response.code) {
+      return;
+    }
+    await this.requestClient({
+      method: "post",
+      url: "https://vaillant-prod.okta.com/oauth2/default/v1/token",
+      headers: {
+        accept: "*/*",
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "user-agent": "okta-react-native/2.7.0 okta-oidc-ios/3.11.2 react-native/>=0.70.1 ios/14.8",
+        "accept-language": "de-de",
+      },
+      data: qs.stringify({
+        code: response.code,
+        code_verifier: code_verifier,
+        redirect_uri: "com.okta.vaillant-prod:/callback",
+        client_id: "0oarllti4egHi7Nwx4x6",
+        grant_type: "authorization_code",
+      }),
+    })
+      .then((res) => {
+        this.log.debug(JSON.stringify(res.data));
+        if (res.data.access_token) {
+          this.log.info("Login successful");
+          this.session = res.data;
+          this.setState("info.connection", true, true);
+        }
+      })
+      .catch((error) => {
+        this.log.error(error);
+        error.response && this.log.error(JSON.stringify(error.response.data));
+      });
+  }
 
+  async getMyvDeviceList() {
+    await this.requestClient({
+      method: "get",
+      url: "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems",
+      headers: {
+        Authorization: "Bearer " + this.session.access_token,
+        "x-app-identifier": "VAILLANT",
+        "Accept-Language": "de-de",
+        Accept: "application/json, text/plain, */*",
+        "x-client-locale": "de-DE",
+        "x-idm-identifier": "OKTA",
+        "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
+        "User-Agent": "myVAILLANT/11835 CFNetwork/1240.0.4 Darwin/20.6.0",
+        Connection: "keep-alive",
+      },
+    })
+      .then(async (res) => {
+        this.log.debug(JSON.stringify(res.data));
+        if (res.data.length > 0) {
+          this.log.info(`Found ${res.data.length} system`);
+          for (const device of res.data) {
+            this.log.debug(JSON.stringify(device));
+            const id = device.systemId;
+            // if (device.subDeviceNo) {
+            //   id += "." + device.subDeviceNo;
+            // }
+
+            this.deviceArray.push(id);
+            const name = device.systemId;
+
+            await this.setObjectNotExistsAsync(id, {
+              type: "device",
+              common: {
+                name: name,
+              },
+              native: {},
+            });
+            await this.setObjectNotExistsAsync(id + ".remote", {
+              type: "channel",
+              common: {
+                name: "Remote Controls",
+              },
+              native: {},
+            });
+
+            /* holiday
+              
+{
+    "holidayEndDateTime": "2023-11-28T23:59:59.999Z",
+    "holidayStartDateTime": "2022-11-28T00:00:00.000Z"
+}
+            */
+            const remoteArray = [
+              { command: "Refresh", name: "True = Refresh" },
+              { command: "setSwitch", name: "True = Switch On, False = Switch Off" },
+              { command: "domesticHotWater/255/boost", name: "True = Switch On, False = Switch Off" },
+              { command: "holiday", name: "True = Switch On, False = Switch Off" },
+              {
+                command: "desiredRoomTemperatureSetpoint",
+                name: "set Room Temperature",
+                type: "number",
+                def: 21,
+                role: "level.temperature",
+              },
+              { command: "duration", name: "Duration Room Temperature", type: "number", def: 3, role: "level" },
+              { command: "zone", name: "Zone Room Temperature", type: "number", def: 0, role: "level" },
+            ];
+            remoteArray.forEach((remote) => {
+              this.setObjectNotExists(id + ".remote." + remote.command, {
+                type: "state",
+                common: {
+                  name: remote.name || "",
+                  type: remote.type || "boolean",
+                  role: remote.role || "boolean",
+                  def: remote.def || false,
+                  write: true,
+                  read: true,
+                },
+                native: {},
+              });
+            });
+            this.json2iob.parse(id, device, { forceIndex: true });
+          }
+        }
+      })
+      .catch((error) => {
+        this.log.error(error);
+        error.response && this.log.error(JSON.stringify(error.response.data));
+      });
+  }
+
+  async updateMyvDevices() {
+    await this.requestClient({
+      method: "get",
+      url: "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems",
+      headers: {
+        Authorization: "Bearer " + this.session.access_token,
+        "x-app-identifier": "VAILLANT",
+        "Accept-Language": "de-de",
+        Accept: "application/json, text/plain, */*",
+        "x-client-locale": "de-DE",
+        "x-idm-identifier": "OKTA",
+        "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
+        "User-Agent": "myVAILLANT/11835 CFNetwork/1240.0.4 Darwin/20.6.0",
+        Connection: "keep-alive",
+      },
+    })
+      .then(async (res) => {
+        this.log.debug(JSON.stringify(res.data));
+        if (res.data.length > 0) {
+          for (const device of res.data) {
+            this.log.debug(JSON.stringify(device));
+            const id = device.systemId;
+            // if (device.subDeviceNo) {
+            //   id += "." + device.subDeviceNo;
+            // }
+
+            this.json2iob.parse(id, device, { forceIndex: true });
+          }
+        }
+      })
+      .catch((error) => {
+        this.log.error(error);
+        error.response && this.log.error(JSON.stringify(error.response.data));
+      });
+  }
+  async refreshToken() {
+    await this.requestClient({
+      method: "post",
+      url: "https://vaillant-prod.okta.com/oauth2/default/v1/token",
+      headers: {
+        accept: "*/*",
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "user-agent": "okta-react-native/2.7.0 okta-oidc-ios/3.11.2 react-native/>=0.70.1 ios/14.8",
+        "accept-language": "de-de",
+      },
+      data: qs.stringify({
+        refresh_token: this.session.refresh_token,
+        client_id: "0oarllti4egHi7Nwx4x6",
+        grant_type: "refresh_token",
+      }),
+    })
+      .then((res) => {
+        this.log.debug(JSON.stringify(res.data));
+        this.session = res.data;
+        this.log.debug("Refresh successful");
+        this.setState("info.connection", true, true);
+      })
+      .catch(async (error) => {
+        this.log.error(error);
+        error.response && this.log.error(JSON.stringify(error.response.data));
+        this.setStateAsync("info.connection", false, true);
+      });
+  }
   updateValues() {
     this.log.debug("update values");
     this.cleanConfigurations()
@@ -670,8 +954,7 @@ class Vaillant extends utils.Adapter {
     }
     return result;
   }
-  makeid() {
-    const length = 202;
+  makeid(length = 202) {
     let result = "";
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     const charactersLength = characters.length;
@@ -687,6 +970,18 @@ class Vaillant extends utils.Adapter {
     }
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
+  getCodeChallenge() {
+    let hash = "";
+    let result = "";
+    const chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-";
+    result = "";
+    for (let i = 171; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
+    hash = crypto.createHash("sha256").update(result).digest("base64");
+    hash = hash.replace(/\+/g, "-").replace(/\//g, "_").replace(/==/g, "=");
+
+    return [result, hash];
+  }
+  /**
   async receiveReports() {
     const date = new Date().toISOString().split("T")[0];
     this.log.debug(date);

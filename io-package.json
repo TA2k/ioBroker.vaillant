@@ -1,8 +1,11 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.0.18",
+    "version": "0.1.0",
     "news": {
+      "0.1.0": {
+        "en": "add myVaillant support"
+      },
       "0.0.18": {
         "en": "fix login in error case"
       },
@@ -96,7 +99,8 @@
     "interval": 15,
     "smartPhoneId": "",
     "cleantype": true,
-    "fetchReports": false
+    "fetchReports": false,
+    "myv": false
   },
   "objects": [],
   "instanceObjects": [

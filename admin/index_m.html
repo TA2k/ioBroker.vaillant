@@ -1,147 +1,154 @@
 <html>
-    <head>
-        <!-- Load ioBroker scripts and styles-->
-        <link rel="stylesheet" type="text/css" href="../../css/adapter.css" />
-        <link rel="stylesheet" type="text/css" href="../../lib/css/materialize.css" />
+  <head>
+    <!-- Load ioBroker scripts and styles-->
+    <link rel="stylesheet" type="text/css" href="../../css/adapter.css" />
+    <link rel="stylesheet" type="text/css" href="../../lib/css/materialize.css" />
 
-        <script type="text/javascript" src="../../lib/js/jquery-3.2.1.min.js"></script>
-        <script type="text/javascript" src="../../socket.io/socket.io.js"></script>
+    <script type="text/javascript" src="../../lib/js/jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="../../socket.io/socket.io.js"></script>
 
-        <script type="text/javascript" src="../../js/translate.js"></script>
-        <script type="text/javascript" src="../../lib/js/materialize.js"></script>
-        <script type="text/javascript" src="../../js/adapter-settings.js"></script>
+    <script type="text/javascript" src="../../js/translate.js"></script>
+    <script type="text/javascript" src="../../lib/js/materialize.js"></script>
+    <script type="text/javascript" src="../../js/adapter-settings.js"></script>
 
-        <!-- Load our own files -->
-        <link rel="stylesheet" type="text/css" href="style.css" />
-        <script type="text/javascript" src="words.js"></script>
+    <!-- Load our own files -->
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <script type="text/javascript" src="words.js"></script>
 
-        <script type="text/javascript">
-            var secret;
+    <script type="text/javascript">
+      var secret;
 
-            function encrypt(key, value) {
-                var result = "";
-                for (var i = 0; i < value.length; ++i) {
-                    result += String.fromCharCode(key[i % key.length].charCodeAt(0) ^ value.charCodeAt(i));
-                }
-                return result;
+      function encrypt(key, value) {
+        var result = "";
+        for (var i = 0; i < value.length; ++i) {
+          result += String.fromCharCode(key[i % key.length].charCodeAt(0) ^ value.charCodeAt(i));
+        }
+        return result;
+      }
+
+      function decrypt(key, value) {
+        var result = "";
+        for (var i = 0; i < value.length; ++i) {
+          result += String.fromCharCode(key[i % key.length].charCodeAt(0) ^ value.charCodeAt(i));
+        }
+        return result;
+      }
+
+      // the function loadSettings has to exist ...
+      function loadHelper(settings, onChange) {
+        // example: select elements with id=key and class=value and insert value
+        if (!settings) return;
+
+        $(".value").each(function () {
+          var $key = $(this);
+          var id = $key.attr("id");
+          if (id === "password") {
+            settings[id] = decrypt(secret, settings[id]);
+          }
+
+          if ($key.attr("type") === "checkbox") {
+            // do not call onChange direct, because onChange could expect some arguments
+            $key.prop("checked", settings[id]).change(function () {
+              onChange();
+            });
+          } else {
+            // do not call onChange direct, because onChange could expect some arguments
+            $key
+              .val(settings[id])
+              .change(function () {
+                onChange();
+              })
+              .keyup(function () {
+                onChange();
+              });
+          }
+        });
+        onChange(false);
+        M.updateTextFields(); // function Materialize.updateTextFields(); to reinitialize all the Materialize labels on the page if you are dynamically adding inputs.
+      }
+      // This will be called by the admin adapter when the settings page loads
+      function load(settings, onChange) {
+        socket.emit("getObject", "system.config", function (err, obj) {
+          secret = (obj.native ? obj.native.secret : "") || "Zgfr56gFe87jJOM";
+          loadHelper(settings, onChange);
+        });
+      }
+
+      // This will be called by the admin adapter when the user presses the save button
+      function save(callback) {
+        // example: select elements with class=value and build settings object
+        var obj = {};
+        $(".value").each(function () {
+          var $this = $(this);
+          var id = $this.attr("id");
+
+          if ($this.attr("type") === "checkbox") {
+            obj[id] = $this.prop("checked");
+          } else {
+            var value = $this.val();
+            if (id === "password") {
+              value = encrypt(secret, value);
             }
+            obj[id] = value;
+          }
+        });
 
-            function decrypt(key, value) {
-                var result = "";
-                for (var i = 0; i < value.length; ++i) {
-                    result += String.fromCharCode(key[i % key.length].charCodeAt(0) ^ value.charCodeAt(i));
-                }
-                return result;
-            }
+        callback(obj);
+      }
+    </script>
+  </head>
 
-            // the function loadSettings has to exist ...
-            function loadHelper(settings, onChange) {
-                // example: select elements with id=key and class=value and insert value
-                if (!settings) return;
-
-                $(".value").each(function () {
-                    var $key = $(this);
-                    var id = $key.attr("id");
-                    if (id === "password") {
-                        settings[id] = decrypt(secret, settings[id]);
-                    }
-
-                    if ($key.attr("type") === "checkbox") {
-                        // do not call onChange direct, because onChange could expect some arguments
-                        $key.prop("checked", settings[id]).change(function () {
-                            onChange();
-                        });
-                    } else {
-                        // do not call onChange direct, because onChange could expect some arguments
-                        $key.val(settings[id])
-                            .change(function () {
-                                onChange();
-                            })
-                            .keyup(function () {
-                                onChange();
-                            });
-                    }
-                });
-                onChange(false);
-                M.updateTextFields(); // function Materialize.updateTextFields(); to reinitialize all the Materialize labels on the page if you are dynamically adding inputs.
-            }
-            // This will be called by the admin adapter when the settings page loads
-            function load(settings, onChange) {
-                socket.emit("getObject", "system.config", function (err, obj) {
-                    secret = (obj.native ? obj.native.secret : "") || "Zgfr56gFe87jJOM";
-                    loadHelper(settings, onChange);
-                });
-            }
-
-            // This will be called by the admin adapter when the user presses the save button
-            function save(callback) {
-                // example: select elements with class=value and build settings object
-                var obj = {};
-                $(".value").each(function () {
-                    var $this = $(this);
-                    var id = $this.attr("id");
-
-                    if ($this.attr("type") === "checkbox") {
-                        obj[id] = $this.prop("checked");
-                    } else {
-                        var value = $this.val();
-                        if (id === "password") {
-                            value = encrypt(secret, value);
-                        }
-                        obj[id] = value;
-                    }
-                });
-
-                callback(obj);
-            }
-        </script>
-    </head>
-
-    <body>
-        <div class="m adapter-container">
-            <div class="row">
-                <div class="col s12 m4 l2">
-                    <img src="vaillant.png" class="logo" />
-                </div>
-            </div>
-
-            <!-- Put your content here -->
-
-            <!-- For example columns with settings: -->
-            <!-- For example columns with settings: -->
-            <div class="row">
-                <div class="col s12 input-field">
-                    <input type="text" class="value" id="user" />
-                    <label for="user" class="translate">Vaillant multiMatic App User</label>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col s12 input-field">
-                    <input type="password" class="value" id="password" />
-                    <label for="password" class="translate">Vaillant multiMatic App Password</label>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col s12 input-field">
-                    <input type="number" class="value" id="interval" min="5" />
-                    <label for="interval" class="translate">Update interval in minutes. Don't use a too low value to prevent blocking.</label>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col s6 input-field">
-                    <input type="checkbox" class="value" id="cleantype" />
-                    <label for="cleantype" class="translate"
-                        >Wähle hier damit die Confiurations Objekte nicht immer gelöscht werden. Das kann zu veralteten Werten führen. Check here to prevent deletion of all states before receiving new
-                        values. This leads to old invalid states.</label
-                    >
-                </div>
-            </div>
-            <div class="row">
-                <div class="col s6 input-field">
-                    <input type="checkbox" class="value" id="fetchReports" />
-                    <label for="fetchReports" class="translate">Wähle hier um die Reports aus der App abzufragen.</label>
-                </div>
-            </div>
+  <body>
+    <div class="m adapter-container">
+      <div class="row">
+        <div class="col s12 m4 l2">
+          <img src="vaillant.png" class="logo" />
         </div>
-    </body>
+      </div>
+
+      <!-- Put your content here -->
+
+      <!-- For example columns with settings: -->
+      <!-- For example columns with settings: -->
+      <div class="row">
+        <div class="col s12 input-field">
+          <input type="text" class="value" id="user" />
+          <label for="user" class="translate">Vaillant App User</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col s12 input-field">
+          <input type="password" class="value" id="password" />
+          <label for="password" class="translate">Vaillant App Password</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col s6 input-field">
+          <input type="checkbox" class="value" id="myv" />
+          <label for="myv" class="translate">myVaillant App verwenden.</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col s12 input-field">
+          <input type="number" class="value" id="interval" min="5" />
+          <label for="interval" class="translate">Update interval in minutes. Don't use a too low value to prevent blocking.</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col s6 input-field">
+          <input type="checkbox" class="value" id="cleantype" />
+          <label for="cleantype" class="translate"
+            >Wähle hier damit die Confiurations Objekte nicht immer gelöscht werden. Das kann zu veralteten Werten führen. Check here to prevent
+            deletion of all states before receiving new values. This leads to old invalid states.</label
+          >
+        </div>
+      </div>
+      <div class="row">
+        <div class="col s6 input-field">
+          <input type="checkbox" class="value" id="fetchReports" />
+          <label for="fetchReports" class="translate">Wähle hier um die Reports aus der App abzufragen.</label>
+        </div>
+      </div>
+    </div>
+  </body>
 </html>
