@@ -1058,8 +1058,64 @@ class Vaillant extends utils.Adapter {
             method = "PATCH";
             data[command] = state.val;
             url =
-              "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" + deviceId + "/zones/" + zoneId + "/quickVeto";
+              "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" + deviceId + "/zones/" + zoneId + "/" + command;
+
+            if (command === "desiredRoomTemperatureSetpoint") {
+              url =
+                "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
+                deviceId +
+                "/zones/" +
+                zoneId +
+                "/quickVeto";
+            }
           }
+          if (id.split(".")[5].includes("circuits")) {
+            let circuitsId = Number(id.split(".")[5].replace("circuits", "")) - 1;
+            this.log.debug("circuits: " + circuitsId);
+            this.log.debug("deviceId: " + deviceId);
+            method = "PATCH";
+            data[command] = state.val;
+            url =
+              "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
+              deviceId +
+              "/circuits/" +
+              circuitsId +
+              "/quickVeto";
+          }
+          if (id.split(".")[5].includes("domesticHotWater")) {
+            const idArray = id.split(".");
+            idArray.pop();
+            idArray.push("index");
+            const index = await this.getStateAsync(idArray.join("."));
+            this.log.debug("index: " + index);
+            this.log.debug("deviceId: " + deviceId);
+            method = state.val ? "POST" : "DELETE";
+            data = {};
+            url =
+              "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
+              deviceId +
+              "/domesticHotWater/" +
+              index.val +
+              "/" +
+              command;
+            if (command === "setPoint") {
+              data = {
+                setPoint: state.val,
+              };
+              url =
+                "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
+                deviceId +
+                "/domesticHotWater/" +
+                index.val +
+                "/temperature";
+            }
+            if (command === "operationMode") {
+              data = {
+                operationMode: state.val,
+              };
+            }
+          }
+
           await this.requestClient({
             method: method,
             url: url,
@@ -1080,6 +1136,10 @@ class Vaillant extends utils.Adapter {
           })
             .then(async (res) => {
               this.log.info(JSON.stringify(res.data));
+              this.refreshTimeout = setTimeout(async () => {
+                this.log.info("Update devices");
+                await this.updateMyvDevices();
+              }, 10 * 1000);
             })
             .catch((error) => {
               this.log.error(error);
