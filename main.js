@@ -314,7 +314,7 @@ class Vaillant extends utils.Adapter {
             await this.setObjectNotExistsAsync(id, {
               type: "device",
               common: {
-                name: name,
+                name: "MyVaillant Device",
               },
               native: {},
             });
