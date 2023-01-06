@@ -92,9 +92,13 @@ class Vaillant extends utils.Adapter {
       if (this.session.access_token) {
         await this.getMyvDeviceList();
         await this.updateMyvDevices();
+        await this.updateMyStats();
         this.updateInterval = setInterval(async () => {
           await this.updateMyvDevices();
         }, this.config.interval * 60 * 1000);
+        this.statInterval = setInterval(async () => {
+          await this.updateMyStats();
+        }, 60 * 60 * 1000);
       }
       this.refreshTokenInterval = setInterval(() => {
         this.refreshToken();
@@ -406,6 +410,93 @@ class Vaillant extends utils.Adapter {
         this.log.error(error);
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
+  }
+  async updateMyStats() {
+    for (const device of this.deviceArray) {
+      await this.requestClient({
+        method: "get",
+        url: "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/emf/v2/" + device + "/currentSystem",
+        headers: {
+          Authorization: "Bearer " + this.session.access_token,
+          "x-app-identifier": "VAILLANT",
+          "Accept-Language": "de-de",
+          Accept: "application/json, text/plain, */*",
+          "x-client-locale": "de-DE",
+          "x-idm-identifier": "OKTA",
+          "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
+          "User-Agent": "myVAILLANT/11835 CFNetwork/1240.0.4 Darwin/20.6.0",
+          Connection: "keep-alive",
+        },
+      })
+        .then(async (res) => {
+          await this.setObjectNotExistsAsync(device + ".stats", {
+            type: "channel",
+            common: {
+              name: "Statistics",
+            },
+            native: {},
+          });
+          this.json2iob.parse(device + ".stats", res.data, { forceIndex: true });
+          this.log.debug(JSON.stringify(res.data));
+          const devices = [];
+          for (const deviceKey in res.data) {
+            if (!res.data[deviceKey] || !res.data[deviceKey].data) {
+              continue;
+            }
+            for (const stats of res.data[deviceKey].data) {
+              // if (!stats.calculated) {
+              //   continue;
+              // }
+              await this.requestClient({
+                method: "get",
+                url:
+                  "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/emf/v2/" +
+                  device +
+                  "/devices/" +
+                  res.data[deviceKey].device_uuid +
+                  "/buckets?resolution=DAY&operationMode=" +
+                  stats.operation_mode +
+                  "&energyType=" +
+                  stats.value_type +
+                  "&startDate=" +
+                  stats.from +
+                  "&endDate=" +
+                  stats.to,
+                headers: {
+                  Authorization: "Bearer " + this.session.access_token,
+                  "x-app-identifier": "VAILLANT",
+                  "Accept-Language": "de-de",
+                  Accept: "application/json, text/plain, */*",
+                  "x-client-locale": "de-DE",
+                  "x-idm-identifier": "OKTA",
+                  "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
+                  "User-Agent": "myVAILLANT/11835 CFNetwork/1240.0.4 Darwin/20.6.0",
+                  Connection: "keep-alive",
+                },
+              })
+                .then(async (res) => {
+                  this.log.debug(JSON.stringify(res.data));
+                  if (res.data && res.data.data) {
+                    res.data.data.sort((a, b) => (a.endDate < b.endDate ? 1 : -1));
+                    this.json2iob.parse(device + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode, res.data.data, {
+                      forceIndex: true,
+                    });
+                  } else {
+                    this.log.debug("No data found for " + deviceKey + "." + stats.value_type + "." + stats.operation_mode + "");
+                  }
+                })
+                .catch((error) => {
+                  this.log.error(error);
+                  error.response && this.log.error(JSON.stringify(error.response.data));
+                });
+            }
+          }
+        })
+        .catch((error) => {
+          this.log.error(error);
+          error.response && this.log.error(JSON.stringify(error.response.data));
+        });
+    }
   }
   async refreshToken() {
     await this.requestClient({
