@@ -98,7 +98,7 @@ class Vaillant extends utils.Adapter {
         }, this.config.interval * 60 * 1000);
         this.statInterval = setInterval(async () => {
           await this.updateMyStats();
-        }, 60 * 60 * 1000);
+        }, 6 * 60 * 60 * 1000);
       }
       this.refreshTokenInterval = setInterval(() => {
         this.refreshToken();
@@ -436,9 +436,10 @@ class Vaillant extends utils.Adapter {
             },
             native: {},
           });
+
           this.json2iob.parse(device + ".stats", res.data, { forceIndex: true });
           this.log.debug(JSON.stringify(res.data));
-          const devices = [];
+
           for (const deviceKey in res.data) {
             if (!res.data[deviceKey] || !res.data[deviceKey].data) {
               continue;
@@ -478,9 +479,27 @@ class Vaillant extends utils.Adapter {
                   this.log.debug(JSON.stringify(res.data));
                   if (res.data && res.data.data) {
                     res.data.data.sort((a, b) => (a.endDate < b.endDate ? 1 : -1));
+                    await this.setObjectNotExistsAsync(
+                      device + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + ".json",
+                      {
+                        type: "state",
+                        common: {
+                          name: "Json Sendungen",
+                          write: false,
+                          read: true,
+                          type: "string",
+                          role: "json",
+                        },
+                        native: {},
+                      }
+                    );
                     this.json2iob.parse(device + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode, res.data.data, {
                       forceIndex: true,
                     });
+                    this.setState(
+                      device + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + ".json",
+                      JSON.stringify(res.data.data)
+                    );
                   } else {
                     this.log.debug("No data found for " + deviceKey + "." + stats.value_type + "." + stats.operation_mode + "");
                   }
