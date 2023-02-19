@@ -97,8 +97,12 @@ class Vaillant extends utils.Adapter {
           await this.updateMyvDevices();
         }, this.config.interval * 60 * 1000);
         this.statInterval = setInterval(async () => {
-          await this.updateMyStats();
-        }, 6 * 60 * 60 * 1000);
+          //run only between 00:00 and 00:11
+          const now = new Date();
+          if (now.getHours() === 0 && now.getMinutes() < 11) {
+            await this.updateMyStats();
+          }
+        }, 10 * 60 * 1000);
       }
       this.refreshTokenInterval = setInterval(() => {
         this.refreshToken();
