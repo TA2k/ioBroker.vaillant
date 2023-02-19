@@ -1,8 +1,11 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "news": {
+      "0.1.1": {
+        "en": "add myVaillant stats"
+      },
       "0.1.0": {
         "en": "add myVaillant support"
       },
