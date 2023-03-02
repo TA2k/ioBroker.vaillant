@@ -88,7 +88,7 @@ class Vaillant extends utils.Adapter {
     // Reset the connection indicator during startup
     this.setState("info.connection", false, true);
     if (this.config.myv) {
-      await this.myvLogin();
+      await this.myvLoginv2();
       if (this.session.access_token) {
         await this.getMyvDeviceList();
         await this.updateMyvDevices();
@@ -192,6 +192,93 @@ class Vaillant extends utils.Adapter {
     }
     // in this template all states changes inside the adapters namespace are subscribed
     this.subscribeStates("*");
+  }
+  async myvLoginv2() {
+    let [code_verifier, codeChallenge] = this.getCodeChallenge();
+    let loginUrl = await this.requestClient({
+      method: "GET",
+      url:
+        "https://identity.vaillant-group.com/auth/realms/vaillant-germany-b2c/protocol/openid-connect/auth?client_id=myvaillant&redirect_uri=enduservaillant.page.link%3A%2F%2Flogin&login_hint=" +
+        this.config.username +
+        "&response_mode=fragment&response_type=code&scope=offline_access%20openid&code_challenge=" +
+        codeChallenge +
+        "&code_challenge_method=S256",
+      headers: this.myvHeader,
+    })
+      .then((res) => {
+        this.log.debug(JSON.stringify(res.data));
+        return res.data.split('action="')[1].split('"')[0];
+      })
+      .catch((error) => {
+        this.log.error(error);
+        error.response && this.log.error(JSON.stringify(error.response.data));
+      });
+    if (!loginUrl) {
+      return;
+    }
+    loginUrl = loginUrl.replace(/&amp;/g, "&");
+    const response = await this.requestClient({
+      method: "POST",
+      url: loginUrl,
+      headers: {
+        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "content-type": "application/x-www-form-urlencoded",
+        origin: "null",
+        "user-agent":
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 16_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Mobile/15E148 Safari/604.1",
+        "accept-language": "de-de",
+      },
+      data: qs.stringify({ username: this.config.username, password: this.config.password, credentialId: "" }),
+    })
+      .then((res) => {
+        this.log.debug(JSON.stringify(res.data));
+        this.log.error("Login failed no response code");
+        return {};
+      })
+      .catch((error) => {
+        if (error && error.message.includes("Unsupported protocol")) {
+          return qs.parse(error.request._options.hash.split("#")[1]);
+        }
+        this.log.error(error);
+        error.response && this.log.error(JSON.stringify(error.response.data));
+      });
+    if (!response.code) {
+      return;
+    }
+    await this.requestClient({
+      method: "post",
+      maxBodyLength: Infinity,
+      url: "https://identity.vaillant-group.com/auth/realms/vaillant-germany-b2c/protocol/openid-connect/token",
+      headers: {
+        Host: "identity.vaillant-group.com",
+        Accept: "application/json, text/plain, */*",
+        "x-app-identifier": "VAILLANT",
+        "Accept-Language": "de-de",
+        "x-client-locale": "de-DE",
+        "x-idm-identifier": "KEYCLOAK",
+        "User-Agent": "myVAILLANT/13324 CFNetwork/1240.0.4 Darwin/20.6.0",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      data: qs.stringify({
+        client_id: "myvaillant",
+        grant_type: "authorization_code",
+        code_verifier: code_verifier,
+        code: response.code,
+        redirect_uri: "enduservaillant.page.link://login",
+      }),
+    })
+      .then((res) => {
+        this.log.debug(JSON.stringify(res.data));
+        if (res.data.access_token) {
+          this.log.info("Login successful");
+          this.session = res.data;
+          this.setState("info.connection", true, true);
+        }
+      })
+      .catch((error) => {
+        this.log.error(error);
+        error.response && this.log.error(JSON.stringify(error.response.data));
+      });
   }
   async myvLogin() {
     let [code_verifier, codeChallenge] = this.getCodeChallenge();
@@ -299,10 +386,9 @@ class Vaillant extends utils.Adapter {
         "Accept-Language": "de-de",
         Accept: "application/json, text/plain, */*",
         "x-client-locale": "de-DE",
-        "x-idm-identifier": "OKTA",
+        "x-idm-identifier": "KEYCLOAK",
         "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-        "User-Agent": "myVAILLANT/11835 CFNetwork/1240.0.4 Darwin/20.6.0",
-        Connection: "keep-alive",
+        "User-Agent": "myVAILLANT/13324 CFNetwork/1240.0.4 Darwin/20.6.0",
       },
     })
       .then(async (res) => {
@@ -390,10 +476,9 @@ class Vaillant extends utils.Adapter {
         "Accept-Language": "de-de",
         Accept: "application/json, text/plain, */*",
         "x-client-locale": "de-DE",
-        "x-idm-identifier": "OKTA",
+        "x-idm-identifier": "KEYCLOAK",
         "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-        "User-Agent": "myVAILLANT/11835 CFNetwork/1240.0.4 Darwin/20.6.0",
-        Connection: "keep-alive",
+        "User-Agent": "myVAILLANT/13324 CFNetwork/1240.0.4 Darwin/20.6.0",
       },
     })
       .then(async (res) => {
@@ -426,10 +511,9 @@ class Vaillant extends utils.Adapter {
           "Accept-Language": "de-de",
           Accept: "application/json, text/plain, */*",
           "x-client-locale": "de-DE",
-          "x-idm-identifier": "OKTA",
+          "x-idm-identifier": "KEYCLOAK",
           "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-          "User-Agent": "myVAILLANT/11835 CFNetwork/1240.0.4 Darwin/20.6.0",
-          Connection: "keep-alive",
+          "User-Agent": "myVAILLANT/13324 CFNetwork/1240.0.4 Darwin/20.6.0",
         },
       })
         .then(async (res) => {
@@ -473,10 +557,9 @@ class Vaillant extends utils.Adapter {
                   "Accept-Language": "de-de",
                   Accept: "application/json, text/plain, */*",
                   "x-client-locale": "de-DE",
-                  "x-idm-identifier": "OKTA",
+                  "x-idm-identifier": "KEYCLOAK",
                   "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-                  "User-Agent": "myVAILLANT/11835 CFNetwork/1240.0.4 Darwin/20.6.0",
-                  Connection: "keep-alive",
+                  "User-Agent": "myVAILLANT/13324 CFNetwork/1240.0.4 Darwin/20.6.0",
                 },
               })
                 .then(async (res) => {
@@ -524,7 +607,7 @@ class Vaillant extends utils.Adapter {
   async refreshToken() {
     await this.requestClient({
       method: "post",
-      url: "https://vaillant-prod.okta.com/oauth2/default/v1/token",
+      url: "https://identity.vaillant-group.com/auth/realms/vaillant-germany-b2c/protocol/openid-connect/token",
       headers: {
         accept: "*/*",
         "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -533,7 +616,7 @@ class Vaillant extends utils.Adapter {
       },
       data: qs.stringify({
         refresh_token: this.session.refresh_token,
-        client_id: "0oarllti4egHi7Nwx4x6",
+        client_id: "myvaillant",
         grant_type: "refresh_token",
       }),
     })
