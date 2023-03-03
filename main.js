@@ -232,7 +232,8 @@ class Vaillant extends utils.Adapter {
     })
       .then((res) => {
         this.log.debug(JSON.stringify(res.data));
-        this.log.error("Login failed no response code");
+        this.log.error("Login failed no code for myvLoginv2");
+        this.log.error(res.data.split('polite">')[1].split("<")[0].trim());
         return {};
       })
       .catch((error) => {
