@@ -76,7 +76,6 @@ class Vaillant extends utils.Adapter {
     } else {
       this.config.password = this.decrypt("Zgfr56gFe87jJOM", this.config.password);
     }
-
     if (this.config.interval < 5) {
       this.log.warn("Interval under 5min is not recommended. Set it back to 5min");
       this.config.interval = 5;
@@ -199,7 +198,7 @@ class Vaillant extends utils.Adapter {
       method: "GET",
       url:
         "https://identity.vaillant-group.com/auth/realms/vaillant-germany-b2c/protocol/openid-connect/auth?client_id=myvaillant&redirect_uri=enduservaillant.page.link%3A%2F%2Flogin&login_hint=" +
-        this.config.username +
+        this.config.user +
         "&response_mode=fragment&response_type=code&scope=offline_access%20openid&code_challenge=" +
         codeChallenge +
         "&code_challenge_method=S256",
@@ -228,7 +227,7 @@ class Vaillant extends utils.Adapter {
           "Mozilla/5.0 (iPhone; CPU iPhone OS 16_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Mobile/15E148 Safari/604.1",
         "accept-language": "de-de",
       },
-      data: qs.stringify({ username: this.config.username, password: this.config.password, credentialId: "" }),
+      data: qs.stringify({ username: this.config.user, password: this.config.password, credentialId: "" }),
     })
       .then((res) => {
         this.log.debug(JSON.stringify(res.data));
