@@ -105,7 +105,7 @@ class Vaillant extends utils.Adapter {
       }
       this.refreshTokenInterval = setInterval(() => {
         this.refreshToken();
-      }, (this.session.expires_in || 3600) * 1000);
+      }, ((this.session.expires_in || 3600) - 100) * 1000);
     } else {
       this.login()
         .then(() => {
@@ -536,6 +536,7 @@ class Vaillant extends utils.Adapter {
               // if (!stats.calculated) {
               //   continue;
               // }
+              // await this.sleep(5000);
               await this.requestClient({
                 method: "get",
                 url:
@@ -563,7 +564,7 @@ class Vaillant extends utils.Adapter {
                 },
               })
                 .then(async (res) => {
-                  this.log.debug(JSON.stringify(res.data));
+                  // this.log.debug(JSON.stringify(res.data));
                   if (res.data && res.data.data) {
                     res.data.data.sort((a, b) => (a.endDate < b.endDate ? 1 : -1));
                     await this.setObjectNotExistsAsync(
@@ -585,7 +586,8 @@ class Vaillant extends utils.Adapter {
                     });
                     this.setState(
                       device + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + ".json",
-                      JSON.stringify(res.data.data)
+                      JSON.stringify(res.data.data),
+                      true
                     );
                   } else {
                     this.log.debug("No data found for " + deviceKey + "." + stats.value_type + "." + stats.operation_mode + "");
