@@ -429,6 +429,7 @@ class Vaillant extends utils.Adapter {
             */
             const remoteArray = [
               { command: "Refresh", name: "True = Refresh" },
+              { command: "RefreshStats", name: "True = Refresh" },
               // { command: "setSwitch", name: "True = Switch On, False = Switch Off" },
               // { command: "domesticHotWater/255/boost", name: "True = Switch On, False = Switch Off" },
               // { command: "holiday", name: "True = Switch On, False = Switch Off" },
@@ -1244,6 +1245,10 @@ class Vaillant extends utils.Adapter {
 
           if (id.split(".")[4] === "Refresh") {
             this.updateMyvDevices();
+            return;
+          }
+          if (id.split(".")[4] === "RefreshStats") {
+            this.updateMyStats();
             return;
           }
           let data = {};
