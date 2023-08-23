@@ -106,7 +106,8 @@
     "smartPhoneId": "",
     "cleantype": true,
     "fetchReports": false,
-    "myv": false
+    "myv": false,
+    "location": "germany"
   },
   "objects": [],
   "instanceObjects": [

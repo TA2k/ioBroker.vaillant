@@ -130,6 +130,12 @@
       </div>
       <div class="row">
         <div class="col s12 input-field">
+          <input type="text" class="value" id="location" />
+          <label for="location" class="translate">Vaillant App Location (denmark, switzerland, austria, belgium)</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col s12 input-field">
           <input type="number" class="value" id="interval" min="5" />
           <label for="interval" class="translate">Update interval in minutes. Don't use a too low value to prevent blocking.</label>
         </div>
@@ -138,8 +144,8 @@
         <div class="col s6 input-field">
           <input type="checkbox" class="value" id="cleantype" />
           <label for="cleantype" class="translate"
-            >Wähle hier damit die Confiurations Objekte nicht immer gelöscht werden. Das kann zu veralteten Werten führen. Check here to prevent
-            deletion of all states before receiving new values. This leads to old invalid states.</label
+            >Wähle hier damit die Confiurations Objekte nicht immer gelöscht werden. Das kann zu veralteten Werten führen. Check here to
+            prevent deletion of all states before receiving new values. This leads to old invalid states.</label
           >
         </div>
       </div>

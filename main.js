@@ -201,7 +201,9 @@ class Vaillant extends utils.Adapter {
     let loginUrl = await this.requestClient({
       method: "GET",
       url:
-        "https://identity.vaillant-group.com/auth/realms/vaillant-germany-b2c/protocol/openid-connect/auth?client_id=myvaillant&redirect_uri=enduservaillant.page.link%3A%2F%2Flogin&login_hint=" +
+        "https://identity.vaillant-group.com/auth/realms/vaillant-" +
+        this.config.location +
+        "-b2c/protocol/openid-connect/auth?client_id=myvaillant&redirect_uri=enduservaillant.page.link%3A%2F%2Flogin&login_hint=" +
         this.config.user +
         "&response_mode=fragment&response_type=code&scope=offline_access%20openid&code_challenge=" +
         codeChallenge +
@@ -252,7 +254,7 @@ class Vaillant extends utils.Adapter {
     await this.requestClient({
       method: "post",
       maxBodyLength: Infinity,
-      url: "https://identity.vaillant-group.com/auth/realms/vaillant-germany-b2c/protocol/openid-connect/token",
+      url: "https://identity.vaillant-group.com/auth/realms/vaillant-" + this.config.location + "-b2c/protocol/openid-connect/token",
       headers: {
         Host: "identity.vaillant-group.com",
         Accept: "application/json, text/plain, */*",
@@ -618,7 +620,7 @@ class Vaillant extends utils.Adapter {
   async refreshToken() {
     await this.requestClient({
       method: "post",
-      url: "https://identity.vaillant-group.com/auth/realms/vaillant-germany-b2c/protocol/openid-connect/token",
+      url: "https://identity.vaillant-group.com/auth/realms/vaillant-" + this.config.location + "-b2c/protocol/openid-connect/token",
       headers: {
         accept: "*/*",
         "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
