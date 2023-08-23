@@ -1,8 +1,11 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "news": {
+      "0.1.3": {
+        "en": "add location config for not germany logins"
+      },
       "0.1.2": {
         "en": "fix refresh token"
       },
