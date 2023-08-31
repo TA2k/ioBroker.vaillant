@@ -385,7 +385,7 @@ class Vaillant extends utils.Adapter {
   async getMyvDeviceList() {
     await this.requestClient({
       method: "get",
-      url: "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems",
+      url: "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/homes",
       headers: {
         Authorization: "Bearer " + this.session.access_token,
         "x-app-identifier": "VAILLANT",
@@ -409,12 +409,12 @@ class Vaillant extends utils.Adapter {
             // }
 
             this.deviceArray.push(id);
-            const name = device.systemId;
+            const name = device.homeName + " " + device.productInformation;
 
             await this.setObjectNotExistsAsync(id, {
               type: "device",
               common: {
-                name: "MyVaillant Device",
+                name: name,
               },
               native: {},
             });
