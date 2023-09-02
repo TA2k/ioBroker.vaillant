@@ -1284,19 +1284,22 @@ class Vaillant extends utils.Adapter {
           let method = "POST";
           const command = id.split(".").pop();
           let url = "";
-          if (id.split(".")[5].includes("zones")) {
-            let zoneId = Number(id.split(".")[5].replace("zones", "")) - 1;
+          const commands = {
+            operationModeHeating: { url: "heating-operation-mode", parameter: "heatingOperationMode" },
+          };
+          if (id.split(".")[4].includes("zones")) {
+            let zoneId = Number(id.split(".")[4].replace("zones", "")) - 1;
             this.log.debug("zoneId: " + zoneId);
             this.log.debug("deviceId: " + deviceId);
             method = "PATCH";
-            data[command] = state.val;
+            data[commands[command].parameter] = state.val;
             url =
               "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
               deviceId +
               "/zones/" +
               zoneId +
               "/" +
-              command;
+              commands[command].url;
 
             if (command === "desiredRoomTemperatureSetpoint") {
               url =
@@ -1307,8 +1310,8 @@ class Vaillant extends utils.Adapter {
                 "/quickVeto";
             }
           }
-          if (id.split(".")[5].includes("circuits")) {
-            let circuitsId = Number(id.split(".")[5].replace("circuits", "")) - 1;
+          if (id.split(".")[4].includes("circuits")) {
+            let circuitsId = Number(id.split(".")[4].replace("circuits", "")) - 1;
             this.log.debug("circuits: " + circuitsId);
             this.log.debug("deviceId: " + deviceId);
             method = "PATCH";
@@ -1320,7 +1323,7 @@ class Vaillant extends utils.Adapter {
               circuitsId +
               "/quickVeto";
           }
-          if (id.split(".")[5].includes("domesticHotWater")) {
+          if (id.split(".")[4].includes("domesticHotWater")) {
             const idArray = id.split(".");
             idArray.pop();
             idArray.push("index");
