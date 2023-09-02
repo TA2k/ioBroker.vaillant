@@ -39,6 +39,15 @@ class Vaillant extends utils.Adapter {
           jar: this.cookieJar,
         },
       }),
+      headers: {
+        "x-app-identifier": "VAILLANT",
+        "Accept-Language": "de-de",
+        Accept: "application/json, text/plain, */*",
+        "x-client-locale": "de-DE",
+        "x-idm-identifier": "KEYCLOAK",
+        "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
+        "User-Agent": "myVAILLANT/17371 CFNetwork/1240.0.4 Darwin/20.6.0",
+      },
     });
     this.jar = request.jar();
     this.updateInterval = null;
@@ -404,13 +413,37 @@ class Vaillant extends utils.Adapter {
           for (const device of res.data) {
             this.log.debug(JSON.stringify(device));
             const id = device.systemId;
+            const remoteState = await this.getObjectAsync(id + ".systemControlState");
+
+            if (remoteState) {
+              this.log.info("Clean old states" + id);
+              await this.delObjectAsync(id, { recursive: true });
+            }
+
             // if (device.subDeviceNo) {
             //   id += "." + device.subDeviceNo;
             // }
 
-            this.deviceArray.push(id);
             const name = device.homeName + " " + device.productInformation;
-
+            device.identifier = await this.requestClient({
+              method: "get",
+              url:
+                "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
+                id +
+                "/meta-info/control-identifier",
+              headers: {
+                Authorization: "Bearer " + this.session.access_token,
+              },
+            })
+              .then((res) => {
+                this.log.debug(JSON.stringify(res.data));
+                return res.data.controlIdentifier;
+              })
+              .catch((error) => {
+                this.log.error(error);
+                error.response && this.log.error(JSON.stringify(error.response.data));
+              });
+            this.deviceArray.push(device);
             await this.setObjectNotExistsAsync(id, {
               type: "device",
               common: {
@@ -463,7 +496,7 @@ class Vaillant extends utils.Adapter {
                 native: {},
               });
             });
-            this.json2iob.parse(id, device, { forceIndex: true, write: true });
+            this.json2iob.parse(id + ".general", device, { forceIndex: true, write: true, channelName: "General Information" });
           }
         }
       })
@@ -474,44 +507,33 @@ class Vaillant extends utils.Adapter {
   }
 
   async updateMyvDevices() {
-    await this.requestClient({
-      method: "get",
-      url: "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems",
-      headers: {
-        Authorization: "Bearer " + this.session.access_token,
-        "x-app-identifier": "VAILLANT",
-        "Accept-Language": "de-de",
-        Accept: "application/json, text/plain, */*",
-        "x-client-locale": "de-DE",
-        "x-idm-identifier": "KEYCLOAK",
-        "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-        "User-Agent": "myVAILLANT/13324 CFNetwork/1240.0.4 Darwin/20.6.0",
-      },
-    })
-      .then(async (res) => {
-        this.log.debug(JSON.stringify(res.data));
-        if (res.data.length > 0) {
-          for (const device of res.data) {
-            this.log.debug(JSON.stringify(device));
-            const id = device.systemId;
-            // if (device.subDeviceNo) {
-            //   id += "." + device.subDeviceNo;
-            // }
-
-            this.json2iob.parse(id, device, { forceIndex: true, write: true });
-          }
-        }
-      })
-      .catch((error) => {
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
-      });
-  }
-  async updateMyStats() {
     for (const device of this.deviceArray) {
       await this.requestClient({
         method: "get",
-        url: "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/emf/v2/" + device + "/currentSystem",
+        url: `https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/${device.systemId}/${device.identifier}`,
+        headers: {
+          Authorization: "Bearer " + this.session.access_token,
+        },
+      })
+        .then(async (res) => {
+          this.log.debug(JSON.stringify(res.data));
+
+          const id = device.systemId;
+
+          this.json2iob.parse(id, res.data, { forceIndex: true, write: true });
+        })
+        .catch((error) => {
+          this.log.error(error);
+          error.response && this.log.error(JSON.stringify(error.response.data));
+        });
+    }
+  }
+  async updateMyStats() {
+    for (const device of this.deviceArray) {
+      const id = device.systemId;
+      await this.requestClient({
+        method: "get",
+        url: "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/emf/v2/" + id + "/currentSystem",
         headers: {
           Authorization: "Bearer " + this.session.access_token,
           "x-app-identifier": "VAILLANT",
@@ -524,7 +546,7 @@ class Vaillant extends utils.Adapter {
         },
       })
         .then(async (res) => {
-          await this.setObjectNotExistsAsync(device + ".stats", {
+          await this.setObjectNotExistsAsync(id + ".stats", {
             type: "channel",
             common: {
               name: "Statistics",
@@ -532,7 +554,7 @@ class Vaillant extends utils.Adapter {
             native: {},
           });
 
-          this.json2iob.parse(device + ".stats", res.data, { forceIndex: true });
+          this.json2iob.parse(id + ".stats", res.data, { forceIndex: true });
           this.log.debug(JSON.stringify(res.data));
 
           for (const deviceKey in res.data) {
@@ -548,7 +570,7 @@ class Vaillant extends utils.Adapter {
                 method: "get",
                 url:
                   "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/emf/v2/" +
-                  device +
+                  id +
                   "/devices/" +
                   res.data[deviceKey].device_uuid +
                   "/buckets?resolution=DAY&operationMode=" +
@@ -575,7 +597,7 @@ class Vaillant extends utils.Adapter {
                   if (res.data && res.data.data) {
                     res.data.data.sort((a, b) => (a.endDate < b.endDate ? 1 : -1));
                     await this.setObjectNotExistsAsync(
-                      device + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + ".json",
+                      id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + ".json",
                       {
                         type: "state",
                         common: {
@@ -588,15 +610,11 @@ class Vaillant extends utils.Adapter {
                         native: {},
                       },
                     );
-                    this.json2iob.parse(
-                      device + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode,
-                      res.data.data,
-                      {
-                        forceIndex: true,
-                      },
-                    );
+                    this.json2iob.parse(id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode, res.data.data, {
+                      forceIndex: true,
+                    });
                     this.setState(
-                      device + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + ".json",
+                      id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + ".json",
                       JSON.stringify(res.data.data),
                       true,
                     );
