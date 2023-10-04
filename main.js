@@ -469,16 +469,17 @@ class Vaillant extends utils.Adapter {
             const remoteArray = [
               { command: "Refresh", name: "True = Refresh" },
               { command: "RefreshStats", name: "True = Refresh" },
+              { command: "operationModeHeating", name: "Heating Operation Mode: e.g. MANUAL, OFF" },
               // { command: "setSwitch", name: "True = Switch On, False = Switch Off" },
               // { command: "domesticHotWater/255/boost", name: "True = Switch On, False = Switch Off" },
               // { command: "holiday", name: "True = Switch On, False = Switch Off" },
-              // {
-              //   command: "desiredRoomTemperatureSetpoint",
-              //   name: "set Room Temperature",
-              //   type: "number",
-              //   def: 21,
-              //   role: "level.temperature",
-              // },
+              {
+                command: "manualModeSetpoint",
+                name: "set Temperature",
+                type: "number",
+                def: 21,
+                role: "level.temperature",
+              },
               // { command: "duration", name: "Duration Room Temperature", type: "number", def: 3, role: "level" },
               // { command: "zone", name: "Zone Room Temperature", type: "number", def: 0, role: "level" },
             ];
@@ -1286,6 +1287,7 @@ class Vaillant extends utils.Adapter {
           let url = "";
           const commands = {
             operationModeHeating: { url: "heating-operation-mode", parameter: "heatingOperationMode" },
+            manualModeSetpoint: { url: "manual-mode-setpoint", parameter: "setpoint" },
           };
           if (id.split(".")[4].includes("zones")) {
             let zoneId = Number(id.split(".")[4].replace("zones", "")) - 1;
