@@ -442,7 +442,7 @@ class Vaillant extends utils.Adapter {
                 error.response && this.log.error(JSON.stringify(error.response.data));
               });
             this.deviceArray.push(device);
-            await this.setObjectNotExistsAsync(id, {
+            await this.extendObjectAsync(id, {
               type: "device",
               common: {
                 name: name,
