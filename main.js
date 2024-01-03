@@ -93,10 +93,12 @@ class Vaillant extends utils.Adapter {
       this.log.info("Generate new Id");
       this.config.smartPhoneId = this.makeid();
     }
+    this.subscribeStates("*");
     // Reset the connection indicator during startup
     this.setState("info.connection", false, true);
     if (this.config.myv) {
       await this.myvLoginv2();
+
       if (this.session.access_token) {
         await this.getMyvDeviceList();
         await this.updateMyvDevices();
@@ -203,7 +205,6 @@ class Vaillant extends utils.Adapter {
         });
     }
     // in this template all states changes inside the adapters namespace are subscribed
-    this.subscribeStates("*");
   }
   async myvLoginv2() {
     const [code_verifier, codeChallenge] = this.getCodeChallenge();
@@ -449,10 +450,11 @@ class Vaillant extends utils.Adapter {
               },
               native: {},
             });
+            await this.delObjectAsync(id + ".remote", { recursive: true });
             await this.setObjectNotExistsAsync(id + ".remote", {
               type: "channel",
               common: {
-                name: "Remote Controls",
+                name: "Remote Controls (For Heating use id.configuration.zones...)",
               },
               native: {},
             });
@@ -466,20 +468,28 @@ class Vaillant extends utils.Adapter {
             const remoteArray = [
               { command: "Refresh", name: "True = Refresh" },
               { command: "RefreshStats", name: "True = Refresh" },
-              { command: "operationModeHeating", name: "Heating Operation Mode: e.g. MANUAL, OFF" },
+              // { command: "operationModeHeating", name: "Heating Operation Mode: e.g. MANUAL, OFF" },
               // { command: "setSwitch", name: "True = Switch On, False = Switch Off" },
-              { command: "awayMode", name: "True = Switch On, False = Switch Off" },
-              { command: "domesticHotWater-boost", name: "True = Switch On, False = Switch Off" },
+              // { command: "awayMode", name: "True = Switch On, False = Switch Off" },
+              { command: "boost", name: "True = Switch On, False = Switch Off" },
               // { command: "holiday", name: "True = Switch On, False = Switch Off" },
+              // {
+              //   command: "manualModeSetpoint",
+              //   name: "set Temperature",
+              //   type: "number",
+              //   def: 21,
+              //   role: "level.temperature",
+              // },
+              // { command: "duration", name: "Duration Room Temperature", type: "number", def: 3, role: "level" },
+              // { command: "zone", name: "Zone Room Temperature", type: "number", def: 0, role: "level" },
               {
-                command: "manualModeSetpoint",
-                name: "set Temperature",
+                command: "quickVeto",
+                name: "set Temperature in TimeControlled Mode (0 to disable)",
                 type: "number",
                 def: 21,
                 role: "level.temperature",
               },
-              // { command: "duration", name: "Duration Room Temperature", type: "number", def: 3, role: "level" },
-              // { command: "zone", name: "Zone Room Temperature", type: "number", def: 0, role: "level" },
+              { command: "duration", name: "QuickVeto duration in minutes", type: "number", def: 3, role: "level" },
             ];
             remoteArray.forEach((remote) => {
               this.extendObjectAsync(id + ".remote." + remote.command, {
@@ -1284,9 +1294,36 @@ class Vaillant extends utils.Adapter {
           let method = "POST";
           const command = id.split(".").pop();
           let url = "";
+
+          if (command === "awayMode") {
+            method = state.val ? "POST" : "DELETE";
+            url = "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" + deviceId + "/tli/away-mode";
+          }
+          if (command === "boost") {
+            method = state.val ? "POST" : "DELETE";
+            url =
+              "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
+              deviceId +
+              "/tli/domestic-hot-water/255/boost";
+          }
+          if (command === "quickVeto") {
+            method = state.val ? "POST" : "DELETE";
+            const durationState = await this.getStateAsync(id.split(".").slice(0, -1).join(".") + ".duration");
+            let duration = 3;
+            if (durationState && durationState.val) {
+              duration = durationState.val;
+            }
+            data = { desiredRoomTemperatureSetpoint: state.val, duration: duration };
+            url =
+              "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
+              deviceId +
+              "/tli/zones/0/quick-veto";
+          }
           const commands = {
             operationModeHeating: { url: "heating-operation-mode", parameter: "heatingOperationMode" },
             manualModeSetpoint: { url: "manual-mode-setpoint", parameter: "setpoint" },
+            manualModeSetpointHeating: { url: "manual-mode-setpoint", parameter: "setpoint" },
+            manualModeSetpointCooling: { url: "manual-mode-setpoint", parameter: "setpoint" },
           };
           if (id.split(".")[4].includes("zones")) {
             const zoneId = Number(id.split(".")[4].replace("zones", "")) - 1;
@@ -1294,10 +1331,16 @@ class Vaillant extends utils.Adapter {
             this.log.debug("deviceId: " + deviceId);
             method = "PATCH";
             data[commands[command].parameter] = state.val;
+            if (command.indexOf("manualModeSetpoint") !== -1) {
+              const type = command.replace("manualModeSetpoint", "");
+              if (type) {
+                data["type"] = type.toLocaleUpperCase();
+              }
+            }
             url =
               "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
               deviceId +
-              "/zones/" +
+              "/tli/zones/" +
               zoneId +
               "/" +
               commands[command].url;
@@ -1306,18 +1349,9 @@ class Vaillant extends utils.Adapter {
               url =
                 "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
                 deviceId +
-                "/zones/" +
+                "/tli/zones/" +
                 zoneId +
                 "/quickVeto";
-            }
-            if (command === "awayMode") {
-              url = "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" + deviceId + "/tli/away-mode";
-            }
-            if (command === "domesticHotWater-boost") {
-              url =
-                "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
-                deviceId +
-                "/domesticHotWater/255/boost";
             }
           }
           if (id.split(".")[4].includes("circuits")) {
@@ -1329,7 +1363,7 @@ class Vaillant extends utils.Adapter {
             url =
               "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
               deviceId +
-              "/circuits/" +
+              "/tli/circuits/" +
               circuitsId +
               "/quickVeto";
           }
@@ -1403,6 +1437,11 @@ class Vaillant extends utils.Adapter {
             this.log.error("Failed to set: " + id + " to: " + state.val);
           });
         }
+      } else {
+        // if (id.indexOf("heating.manualModeSetpointHeating") !== -1) {
+        //   const deviceId = id.split(".")[2];
+        //   this.setState(deviceId + ".remote.quickVeto", state.val, true);
+        // }
       }
     } else {
       // The state was deleted

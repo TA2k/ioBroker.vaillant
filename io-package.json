@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.2.1",
+    "version": "0.3.0",
     "news": {
+      "0.3.0": {
+        "en": "Fix remote controls and added boost and quick veto",
+        "de": "Remote Controls gefixt und Boost und quickveto hinzugefügt"
+      },
       "0.2.1": {
         "en": "add simple remote controls",
         "de": "Einfache remote controls hinzufügen"
