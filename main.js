@@ -182,7 +182,7 @@ class Vaillant extends utils.Adapter {
                   await this.sleep(10000);
                   if (this.config.fetchReports) {
                     this.log.info("Receiving first time reports");
-                    await this.receiveReports();
+                    // await this.receiveReports();
                   }
                 })
                 .catch(() => {
@@ -206,7 +206,7 @@ class Vaillant extends utils.Adapter {
     this.subscribeStates("*");
   }
   async myvLoginv2() {
-    let [code_verifier, codeChallenge] = this.getCodeChallenge();
+    const [code_verifier, codeChallenge] = this.getCodeChallenge();
     let loginUrl = await this.requestClient({
       method: "GET",
       url:
@@ -248,7 +248,6 @@ class Vaillant extends utils.Adapter {
         this.log.debug(JSON.stringify(res.data));
         this.log.error("Login failed no code for myvLoginv2");
         this.log.error(res.data.split('polite">')[1].split("<")[0].trim());
-        return {};
       })
       .catch((error) => {
         if (error && error.message.includes("Unsupported protocol")) {
@@ -257,7 +256,7 @@ class Vaillant extends utils.Adapter {
         this.log.error(error);
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
-    if (!response.code) {
+    if (!response || !response.code) {
       return;
     }
     await this.requestClient({
@@ -296,7 +295,7 @@ class Vaillant extends utils.Adapter {
       });
   }
   async myvLogin() {
-    let [code_verifier, codeChallenge] = this.getCodeChallenge();
+    const [code_verifier, codeChallenge] = this.getCodeChallenge();
     const sessionToken = await this.requestClient({
       method: "post",
       url: "https://vaillant-prod.okta.com/api/v1/authn",
@@ -348,7 +347,6 @@ class Vaillant extends utils.Adapter {
       .then((res) => {
         this.log.debug(JSON.stringify(res.data));
         this.log.error("Login failed no response code");
-        return {};
       })
       .catch((error) => {
         if (error && error.message.includes("Unsupported protocol")) {
@@ -357,7 +355,7 @@ class Vaillant extends utils.Adapter {
         this.log.error(error);
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
-    if (!response.code) {
+    if (!response || !response.code) {
       return;
     }
     await this.requestClient({
@@ -460,7 +458,6 @@ class Vaillant extends utils.Adapter {
             });
 
             /* holiday
-              
 {
     "holidayEndDateTime": "2023-11-28T23:59:59.999Z",
     "holidayStartDateTime": "2022-11-28T00:00:00.000Z"
@@ -471,7 +468,8 @@ class Vaillant extends utils.Adapter {
               { command: "RefreshStats", name: "True = Refresh" },
               { command: "operationModeHeating", name: "Heating Operation Mode: e.g. MANUAL, OFF" },
               // { command: "setSwitch", name: "True = Switch On, False = Switch Off" },
-              // { command: "domesticHotWater/255/boost", name: "True = Switch On, False = Switch Off" },
+              { command: "awayMode", name: "True = Switch On, False = Switch Off" },
+              { command: "domesticHotWater-boost", name: "True = Switch On, False = Switch Off" },
               // { command: "holiday", name: "True = Switch On, False = Switch Off" },
               {
                 command: "manualModeSetpoint",
@@ -484,12 +482,12 @@ class Vaillant extends utils.Adapter {
               // { command: "zone", name: "Zone Room Temperature", type: "number", def: 0, role: "level" },
             ];
             remoteArray.forEach((remote) => {
-              this.setObjectNotExists(id + ".remote." + remote.command, {
+              this.extendObjectAsync(id + ".remote." + remote.command, {
                 type: "state",
                 common: {
                   name: remote.name || "",
                   type: remote.type || "boolean",
-                  role: remote.role || "button",
+                  role: remote.role || "switch",
                   def: remote.def != null ? remote.def : false,
                   write: true,
                   read: true,
@@ -704,7 +702,7 @@ class Vaillant extends utils.Adapter {
         );
         if (this.config.fetchReports) {
           await this.sleep(20000);
-          await this.receiveReports();
+          // await this.receiveReports();
         }
       })
 
@@ -759,8 +757,8 @@ class Vaillant extends utils.Adapter {
               this.login();
             }, 4 * 60 * 60 * 1000); //4h;
           } catch (error) {
-            this.log.error(error);
-            this.log.error(error.stack);
+            this.log.error(JSON.stringify(error));
+            error && this.log.error(JSON.stringify(error.stack));
             reject();
           }
         },
@@ -820,7 +818,7 @@ class Vaillant extends utils.Adapter {
               try {
                 await this.delObjectAsync(keyName.split(".").slice(2).join("."));
               } catch (error) {
-                this.log.debug(error);
+                this.log.debug(JSON.stringify(error));
               }
             }
             resolve();
@@ -1169,8 +1167,8 @@ class Vaillant extends utils.Adapter {
             this.log.debug(JSON.stringify(body));
             resolve();
           } catch (error) {
-            this.log.error(error);
-            this.log.error(error.stack);
+            this.log.error(JSON.stringify(error));
+            error && this.log.error(error.stack);
             reject();
           }
         },
@@ -1253,9 +1251,10 @@ class Vaillant extends utils.Adapter {
     try {
       this.log.info("cleaned everything up...");
       this.adapterStopped = true;
-      clearInterval(this.updateInterval);
-      clearInterval(this.reauthInterval);
-      clearTimeout(this.reloginTimeout);
+      this.updateInterval && clearInterval(this.updateInterval);
+      this.reauthInterval && clearInterval(this.reauthInterval);
+      this.reloginTimeout && clearTimeout(this.reloginTimeout);
+      this.refreshTokenInterval && clearInterval(this.refreshTokenInterval);
       callback();
     } catch (e) {
       callback();
@@ -1290,7 +1289,7 @@ class Vaillant extends utils.Adapter {
             manualModeSetpoint: { url: "manual-mode-setpoint", parameter: "setpoint" },
           };
           if (id.split(".")[4].includes("zones")) {
-            let zoneId = Number(id.split(".")[4].replace("zones", "")) - 1;
+            const zoneId = Number(id.split(".")[4].replace("zones", "")) - 1;
             this.log.debug("zoneId: " + zoneId);
             this.log.debug("deviceId: " + deviceId);
             method = "PATCH";
@@ -1310,6 +1309,15 @@ class Vaillant extends utils.Adapter {
                 "/zones/" +
                 zoneId +
                 "/quickVeto";
+            }
+            if (command === "awayMode") {
+              url = "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" + deviceId + "/tli/away-mode";
+            }
+            if (command === "domesticHotWater-boost") {
+              url =
+                "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
+                deviceId +
+                "/domesticHotWater/255/boost";
             }
           }
           if (id.split(".")[4].includes("circuits")) {

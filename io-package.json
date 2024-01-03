@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "news": {
+      "0.2.1": {
+        "en": "add simple remote controls",
+        "de": "Einfache remote controls hinzufügen"
+      },
       "0.2.0": {
         "en": "fix for myVaillant. Complete controlling is not possible at the moment. Only mode and mode can be changed.",
         "de": "Fix für myVaillant. Vollständige Steuerung ist derzeit nicht möglich. Nur Modus können geändert werden."
