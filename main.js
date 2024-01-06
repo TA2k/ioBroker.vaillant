@@ -252,6 +252,8 @@ class Vaillant extends utils.Adapter {
       })
       .catch((error) => {
         if (error && error.message.includes("Unsupported protocol")) {
+          this.log.debug(JSON.stringify(error.message));
+          this.log.debug(JSON.stringify(error.request._options));
           return qs.parse(error.request._options.hash.split("#")[1]);
         }
         this.log.error(error);
@@ -467,7 +469,7 @@ class Vaillant extends utils.Adapter {
             */
             const remoteArray = [
               { command: "Refresh", name: "True = Refresh" },
-              { command: "RefreshStats", name: "True = Refresh" },
+              { command: "RefreshStats", name: "True = Stats Refresh" },
               // { command: "operationModeHeating", name: "Heating Operation Mode: e.g. MANUAL, OFF" },
               // { command: "setSwitch", name: "True = Switch On, False = Switch Off" },
               // { command: "awayMode", name: "True = Switch On, False = Switch Off" },
