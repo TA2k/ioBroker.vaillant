@@ -253,7 +253,7 @@ class Vaillant extends utils.Adapter {
       .catch((error) => {
         if (error && error.message.includes("Unsupported protocol")) {
           this.log.debug(JSON.stringify(error.message));
-          this.log.debug(JSON.stringify(error.request._options));
+          this.log.debug(JSON.stringify(error.request._options.href));
           return qs.parse(error.request._options.hash.split("#")[1]);
         }
         this.log.error(error);
