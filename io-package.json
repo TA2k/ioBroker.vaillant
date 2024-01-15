@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "news": {
+      "0.3.1": {
+        "en": "Fix login problem",
+        "de": "Loginproblem behoben"
+      },
       "0.3.0": {
         "en": "Fix remote controls and added boost and quick veto",
         "de": "Remote Controls gefixt und Boost und quickveto hinzugefügt"
