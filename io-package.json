@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.3.1",
+    "version": "0.4.0",
     "news": {
+      "0.4.0": {
+        "en": "Fix update for non tli devices",
+        "de": "Fix update für nicht tli Geräte"
+      },
       "0.3.1": {
         "en": "Fix login problem",
         "de": "Loginproblem behoben"
