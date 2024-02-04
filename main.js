@@ -46,7 +46,7 @@ class Vaillant extends utils.Adapter {
         "x-client-locale": "de-DE",
         "x-idm-identifier": "KEYCLOAK",
         "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-        "User-Agent": "myVAILLANT/17371 CFNetwork/1240.0.4 Darwin/20.6.0",
+        "User-Agent": "myVAILLANT/20034 CFNetwork/1240.0.4 Darwin/20.6.0",
       },
     });
     this.jar = request.jar();
@@ -72,6 +72,7 @@ class Vaillant extends utils.Adapter {
     this.adapterStopped = false;
     this.isSpineActive = true;
     this.reports = {};
+    this.etags = {};
   }
 
   /**
@@ -98,10 +99,12 @@ class Vaillant extends utils.Adapter {
     this.setState("info.connection", false, true);
     if (this.config.myv) {
       await this.myvLoginv2();
-
       if (this.session.access_token) {
+        this.log.info("Getting myv devices");
         await this.getMyvDeviceList();
+        this.log.info("Receiving first time status");
         await this.updateMyvDevices();
+        this.log.info("Receiving first time stats");
         await this.updateMyStats();
         this.updateInterval = setInterval(async () => {
           await this.updateMyvDevices();
@@ -520,21 +523,37 @@ class Vaillant extends utils.Adapter {
 
   async updateMyvDevices() {
     for (const device of this.deviceArray) {
+      let url = `https://api.vaillant-group.com/service-connected-control/${device.identifier}/v1/systems/${device.systemId}`;
+      if (device.identifier === "tli") {
+        url = `https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/${device.systemId}/${device.identifier}`;
+      }
+
+      const headers = {
+        Authorization: "Bearer " + this.session.access_token,
+      };
+      if (this.etags[url]) {
+        headers["If-None-Match"] = this.etags[url];
+      }
       await this.requestClient({
         method: "get",
-        url: `https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/${device.systemId}/${device.identifier}`,
-        headers: {
-          Authorization: "Bearer " + this.session.access_token,
-        },
+        url: url,
+        headers: headers,
       })
         .then(async (res) => {
           this.log.debug(JSON.stringify(res.data));
 
           const id = device.systemId;
-
+          if (res.headers.etag) {
+            this.etags[url] = res.headers.etag;
+          }
           this.json2iob.parse(id, res.data, { forceIndex: true, write: true });
         })
         .catch((error) => {
+          if (error.response && error.response.status === 304) {
+            this.log.debug("No changes for " + url);
+            return;
+          }
+          this.log.error("Failed to get status for " + device.systemId);
           this.log.error(error);
           error.response && this.log.error(JSON.stringify(error.response.data));
         });
