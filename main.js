@@ -1316,10 +1316,15 @@ class Vaillant extends utils.Adapter {
           let method = "POST";
           const command = id.split(".").pop();
           let url = "";
+          //find deviceidentifier
+          const identifier = this.deviceArray.find((device) => device.systemId === deviceId).identifier;
 
           if (command === "awayMode") {
             method = state.val ? "POST" : "DELETE";
             url = "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" + deviceId + "/tli/away-mode";
+            if (identifier !== "tli") {
+              url = "https://api.vaillant-group.com/service-connected-control/" + identifier + "/v1/systems/" + deviceId + "/away-mode";
+            }
           }
           if (command === "boost") {
             method = state.val ? "POST" : "DELETE";
@@ -1327,6 +1332,14 @@ class Vaillant extends utils.Adapter {
               "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
               deviceId +
               "/tli/domestic-hot-water/255/boost";
+            if (identifier !== "tli") {
+              url =
+                "https://api.vaillant-group.com/service-connected-control/" +
+                identifier +
+                "/v1/systems/" +
+                deviceId +
+                "/domestic-hot-water/255/boost";
+            }
           }
           if (command === "quickVeto") {
             method = state.val ? "POST" : "DELETE";
@@ -1340,6 +1353,14 @@ class Vaillant extends utils.Adapter {
               "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
               deviceId +
               "/tli/zones/0/quick-veto";
+            if (identifier !== "tli") {
+              url =
+                "https://api.vaillant-group.com/service-connected-control/" +
+                identifier +
+                "/v1/systems/" +
+                deviceId +
+                "/zones/0/quick-veto";
+            }
           }
           const commands = {
             operationModeHeating: { url: "heating-operation-mode", parameter: "heatingOperationMode" },
@@ -1366,6 +1387,17 @@ class Vaillant extends utils.Adapter {
               zoneId +
               "/" +
               commands[command].url;
+            if (identifier !== "tli") {
+              url =
+                "https://api.vaillant-group.com/service-connected-control/" +
+                identifier +
+                "/v1/systems/" +
+                deviceId +
+                "/zones/" +
+                zoneId +
+                "/" +
+                commands[command].url;
+            }
 
             if (command === "desiredRoomTemperatureSetpoint") {
               url =
@@ -1374,6 +1406,16 @@ class Vaillant extends utils.Adapter {
                 "/tli/zones/" +
                 zoneId +
                 "/quickVeto";
+              if (identifier !== "tli") {
+                url =
+                  "https://api.vaillant-group.com/service-connected-control/" +
+                  identifier +
+                  "/v1/systems/" +
+                  deviceId +
+                  "/zones/" +
+                  zoneId +
+                  "/quickVeto";
+              }
             }
           }
           if (id.split(".")[4].includes("circuits")) {
@@ -1388,6 +1430,16 @@ class Vaillant extends utils.Adapter {
               "/tli/circuits/" +
               circuitsId +
               "/quickVeto";
+            if (identifier !== "tli") {
+              url =
+                "https://api.vaillant-group.com/service-connected-control/" +
+                identifier +
+                "/v1/systems/" +
+                deviceId +
+                "/circuits/" +
+                circuitsId +
+                "/quickVeto";
+            }
           }
           if (id.split(".")[4].includes("domesticHotWater")) {
             const idArray = id.split(".");
@@ -1405,6 +1457,17 @@ class Vaillant extends utils.Adapter {
               index.val +
               "/" +
               command;
+            if (identifier !== "tli") {
+              url =
+                "https://api.vaillant-group.com/service-connected-control/" +
+                identifier +
+                "/v1/systems/" +
+                deviceId +
+                "/domesticHotWater/" +
+                index.val +
+                "/" +
+                command;
+            }
             if (command === "setPoint") {
               data = {
                 setPoint: state.val,
@@ -1415,6 +1478,16 @@ class Vaillant extends utils.Adapter {
                 "/domesticHotWater/" +
                 index.val +
                 "/temperature";
+              if (identifier !== "tli") {
+                url =
+                  "https://api.vaillant-group.com/service-connected-control/" +
+                  identifier +
+                  "/v1/systems/" +
+                  deviceId +
+                  "/domesticHotWater/" +
+                  index.val +
+                  "/temperature";
+              }
             }
             if (command === "operationMode") {
               data = {
