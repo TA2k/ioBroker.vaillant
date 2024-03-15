@@ -21,7 +21,7 @@
   "description": "Vaillant multiMatic VR900/VR920 Adapter",
   "devDependencies": {
     "@iobroker/testing": "^4.1.1",
-    "@types/node": "^20.11.27",
+    "@types/node": "^20.11.28",
     "eslint": "^8.57.0",
     "typescript": "~5.4.2"
   },
@@ -47,5 +47,5 @@
     "test:package": "mocha test/package --exit",
     "test:unit": "mocha test/unit --exit"
   },
-  "version": "0.4.0"
+  "version": "0.5.0"
 }

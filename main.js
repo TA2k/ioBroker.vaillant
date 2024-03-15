@@ -496,6 +496,13 @@ class Vaillant extends utils.Adapter {
                 role: "level.temperature",
               },
               { command: "duration", name: "QuickVeto duration in minutes", type: "number", def: 3, role: "level" },
+              {
+                command: "customCommand",
+                name: "Send custom command as json",
+                type: "json",
+                role: "json",
+                def: `{"url":"zone/1/heating/comfort-room-temperature", "data":{"comfortRoomTemperature":10.5}}`,
+              },
             ];
             remoteArray.forEach((remote) => {
               this.extendObjectAsync(id + ".remote." + remote.command, {
@@ -546,7 +553,11 @@ class Vaillant extends utils.Adapter {
           if (res.headers.etag) {
             this.etags[url] = res.headers.etag;
           }
-          this.json2iob.parse(id, res.data, { forceIndex: true, write: true });
+          this.json2iob.parse(id, res.data, {
+            forceIndex: true,
+            write: true,
+            channelName: device.homeName + " " + device.productInformation,
+          });
         })
         .catch((error) => {
           if (error.response && error.response.status === 304) {
@@ -636,7 +647,7 @@ class Vaillant extends utils.Adapter {
                       {
                         type: "state",
                         common: {
-                          name: "Json Sendungen",
+                          name: "Json Stats",
                           write: false,
                           read: true,
                           type: "string",
@@ -1367,30 +1378,36 @@ class Vaillant extends utils.Adapter {
             }
           }
           const commands = {
-            operationModeHeating: { url: "heating-operation-mode", parameter: "heatingOperationMode" },
+            operationModeHeating: { url: "heating/operation-mode", parameter: "operationMode" },
             manualModeSetpoint: { url: "manual-mode-setpoint", parameter: "setpoint" },
             manualModeSetpointHeating: { url: "manual-mode-setpoint", parameter: "setpoint" },
             manualModeSetpointCooling: { url: "manual-mode-setpoint", parameter: "setpoint" },
           };
           if (id.split(".")[4].includes("zones")) {
-            const zoneId = Number(id.split(".")[4].replace("zones", "")) - 1;
+            const zoneId = Number(id.split(".")[4].replace("zones", "")); //- 1;
             this.log.debug("zoneId: " + zoneId);
             this.log.debug("deviceId: " + deviceId);
             method = "PATCH";
-            data[commands[command].parameter] = state.val;
+            const parameter = command;
+            if (commands[command]) {
+              parameter = commands[command].parameter;
+            }
+
+            data[parameter] = state.val;
             if (command.indexOf("manualModeSetpoint") !== -1) {
               const type = command.replace("manualModeSetpoint", "");
               if (type) {
                 data["type"] = type.toLocaleUpperCase();
               }
             }
+            const urlPostfix = commands[command] ? commands[command].url : command;
             url =
               "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
               deviceId +
               "/tli/zones/" +
               zoneId +
               "/" +
-              commands[command].url;
+              urlPostfix;
             if (identifier !== "tli") {
               url =
                 "https://api.vaillant-group.com/service-connected-control/" +
@@ -1400,7 +1417,7 @@ class Vaillant extends utils.Adapter {
                 "/zones/" +
                 zoneId +
                 "/" +
-                commands[command].url;
+                urlPostfix;
             }
 
             if (command === "desiredRoomTemperatureSetpoint") {
@@ -1500,6 +1517,35 @@ class Vaillant extends utils.Adapter {
             }
           }
 
+          if (command === "customCommand") {
+            try {
+              const parsedCommand = JSON.parse(state.val);
+              method = "PATCH";
+              if (parsedCommand.method) {
+                method = parsedCommand.method;
+              }
+              url =
+                "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
+                deviceId +
+                "/tli/" +
+                parsedCommand.url;
+              if (identifier !== "tli") {
+                url =
+                  "https://api.vaillant-group.com/service-connected-control/" +
+                  identifier +
+                  "/v1/systems/" +
+                  deviceId +
+                  "/" +
+                  parsedCommand.url;
+              }
+              data = parsedCommand.data;
+            } catch (error) {
+              this.log.error("Failed to parse custom command");
+              this.log.error(error);
+            }
+          }
+          this.log.debug(url);
+          this.log.debug(JSON.stringify(data));
           await this.requestClient({
             method: method,
             url: url,
