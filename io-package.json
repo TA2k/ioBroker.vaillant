@@ -130,7 +130,8 @@
     "cleantype": true,
     "fetchReports": false,
     "myv": false,
-    "location": "germany"
+    "location": "germany",
+    "fetchReportsLimit": 100
   },
   "objects": [],
   "instanceObjects": [

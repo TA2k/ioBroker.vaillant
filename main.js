@@ -597,6 +597,10 @@ class Vaillant extends utils.Adapter {
               //   continue;
               // }
               // await this.sleep(5000);
+              const toDate = stats.to;
+              // startDate minus this.config.fetchReportsLimit days
+              const lastDateTimeStamp = new Date(toDate) - this.config.fetchReportsLimit * 24 * 60 * 60 * 1000;
+              const fromDate = new Date(lastDateTimeStamp).toISOString().replace(".000Z", "Z");
               await this.requestClient({
                 method: "get",
                 url:
@@ -609,9 +613,9 @@ class Vaillant extends utils.Adapter {
                   "&energyType=" +
                   stats.value_type +
                   "&startDate=" +
-                  stats.from +
+                  fromDate +
                   "&endDate=" +
-                  stats.to,
+                  toDate,
                 headers: {
                   Authorization: "Bearer " + this.session.access_token,
                   "x-app-identifier": "VAILLANT",
