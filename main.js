@@ -105,6 +105,7 @@ class Vaillant extends utils.Adapter {
         this.log.info("Receiving first time status");
         await this.updateMyvDevices();
         this.log.info("Receiving first time stats");
+        await this.clearOldStats();
         await this.updateMyStats();
         this.updateInterval = setInterval(async () => {
           await this.updateMyvDevices();
@@ -570,6 +571,27 @@ class Vaillant extends utils.Adapter {
         });
     }
   }
+  async clearOldStats() {
+    for (const device of this.deviceArray) {
+      const id = device.systemId;
+      const newStatsState = await this.getStateAsync(id + ".v2");
+      if (!newStatsState) {
+        this.log.info("Clear old stats for " + id);
+        await this.delObjectAsync(id + ".stats", { recursive: true });
+        await this.setObjectNotExistsAsync(id + ".v2", {
+          type: "state",
+          common: {
+            name: "v2",
+            write: false,
+            read: true,
+            type: "boolean",
+            role: "indicator",
+          },
+          native: {},
+        });
+      }
+    }
+  }
   async updateMyStats() {
     for (const device of this.deviceArray) {
       const id = device.systemId;
@@ -598,10 +620,8 @@ class Vaillant extends utils.Adapter {
 
           this.json2iob.parse(id + ".stats", res.data, { forceIndex: true });
           this.log.debug(JSON.stringify(res.data));
-          const resolutions = ["DAY"];
-          if (this.config.fetchMonths) {
-            resolutions.push("MONTH");
-          }
+          const resolutions = ["DAY", "MONTH"];
+
           for (const deviceKey in res.data) {
             if (!res.data[deviceKey] || !res.data[deviceKey].data) {
               continue;
