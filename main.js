@@ -598,7 +598,10 @@ class Vaillant extends utils.Adapter {
 
           this.json2iob.parse(id + ".stats", res.data, { forceIndex: true });
           this.log.debug(JSON.stringify(res.data));
-
+          const resolutions = ["DAY"];
+          if (this.config.fetchMonths) {
+            resolutions.push("MONTH");
+          }
           for (const deviceKey in res.data) {
             if (!res.data[deviceKey] || !res.data[deviceKey].data) {
               continue;
@@ -608,70 +611,89 @@ class Vaillant extends utils.Adapter {
               //   continue;
               // }
               // await this.sleep(5000);
-              const toDate = stats.to;
-              // startDate minus this.config.fetchReportsLimit days
-              const lastDateTimeStamp = new Date(toDate) - this.config.fetchReportsLimit * 24 * 60 * 60 * 1000;
-              const fromDate = new Date(lastDateTimeStamp).toISOString().replace(".000Z", "Z");
-              await this.requestClient({
-                method: "get",
-                url:
-                  "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/emf/v2/" +
-                  id +
-                  "/devices/" +
-                  res.data[deviceKey].device_uuid +
-                  "/buckets?resolution=DAY&operationMode=" +
-                  stats.operation_mode +
-                  "&energyType=" +
-                  stats.value_type +
-                  "&startDate=" +
-                  fromDate +
-                  "&endDate=" +
-                  toDate,
-                headers: {
-                  Authorization: "Bearer " + this.session.access_token,
-                  "x-app-identifier": "VAILLANT",
-                  "Accept-Language": "de-de",
-                  Accept: "application/json, text/plain, */*",
-                  "x-client-locale": "de-DE",
-                  "x-idm-identifier": "KEYCLOAK",
-                  "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-                  "User-Agent": "myVAILLANT/13324 CFNetwork/1240.0.4 Darwin/20.6.0",
-                },
-              })
-                .then(async (res) => {
-                  // this.log.debug(JSON.stringify(res.data));
-                  if (res.data && res.data.data) {
-                    res.data.data.sort((a, b) => (a.endDate < b.endDate ? 1 : -1));
-                    await this.setObjectNotExistsAsync(
-                      id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + ".json",
-                      {
-                        type: "state",
-                        common: {
-                          name: "Json Stats",
-                          write: false,
-                          read: true,
-                          type: "string",
-                          role: "json",
-                        },
-                        native: {},
-                      },
-                    );
-                    this.json2iob.parse(id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode, res.data.data, {
-                      forceIndex: true,
-                    });
-                    this.setState(
-                      id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + ".json",
-                      JSON.stringify(res.data.data),
-                      true,
-                    );
-                  } else {
-                    this.log.debug("No data found for " + deviceKey + "." + stats.value_type + "." + stats.operation_mode + "");
-                  }
+              for (const resolution of resolutions) {
+                const toDate = stats.to;
+                const lastDateTimeStamp = new Date(toDate) - this.config.fetchReportsLimit * 24 * 60 * 60 * 1000;
+                let fromDate = new Date(lastDateTimeStamp).toISOString().replace(".000Z", "Z");
+
+                if (res === "MONTH") {
+                  fromDate = stats.from;
+                }
+
+                // startDate minus this.config.fetchReportsLimit days
+
+                await this.requestClient({
+                  method: "get",
+                  url:
+                    "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/emf/v2/" +
+                    id +
+                    "/devices/" +
+                    res.data[deviceKey].device_uuid +
+                    "/buckets?resolution=" +
+                    resolution +
+                    "&operationMode=" +
+                    stats.operation_mode +
+                    "&energyType=" +
+                    stats.value_type +
+                    "&startDate=" +
+                    fromDate +
+                    "&endDate=" +
+                    toDate,
+                  headers: {
+                    Authorization: "Bearer " + this.session.access_token,
+                    "x-app-identifier": "VAILLANT",
+                    "Accept-Language": "de-de",
+                    Accept: "application/json, text/plain, */*",
+                    "x-client-locale": "de-DE",
+                    "x-idm-identifier": "KEYCLOAK",
+                    "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
+                    "User-Agent": "myVAILLANT/13324 CFNetwork/1240.0.4 Darwin/20.6.0",
+                  },
                 })
-                .catch((error) => {
-                  this.log.error(error);
-                  error.response && this.log.error(JSON.stringify(error.response.data));
-                });
+                  .then(async (res) => {
+                    // this.log.debug(JSON.stringify(res.data));
+                    if (res.data && res.data.data) {
+                      res.data.data.sort((a, b) => (a.endDate < b.endDate ? 1 : -1));
+
+                      await this.setObjectNotExistsAsync(
+                        id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + ".json",
+                        {
+                          type: "state",
+                          common: {
+                            name: "Json Stats",
+                            write: false,
+                            read: true,
+                            type: "string",
+                            role: "json",
+                          },
+                          native: {},
+                        },
+                      );
+                      this.json2iob.parse(
+                        id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + resolution === "MONTH"
+                          ? ".month"
+                          : "",
+                        res.data.data,
+                        {
+                          forceIndex: true,
+                        },
+                      );
+                      this.setState(
+                        id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + resolution === "MONTH"
+                          ? ".month"
+                          : "" + ".json",
+                        JSON.stringify(res.data.data),
+                        true,
+                      );
+                    } else {
+                      this.log.debug("No data found for " + deviceKey + "." + stats.value_type + "." + stats.operation_mode + "");
+                    }
+                  })
+                  .catch((error) => {
+                    this.log.error(error);
+                    error.response && this.log.error(JSON.stringify(error.response.data));
+                  });
+              }
             }
           }
         })
@@ -1440,7 +1462,7 @@ class Vaillant extends utils.Adapter {
             }
           }
           if (id.split(".")[4].includes("circuits")) {
-            let circuitsId = Number(id.split(".")[4].replace("circuits", "")) - 1;
+            const circuitsId = Number(id.split(".")[4].replace("circuits", "")) - 1;
             this.log.debug("circuits: " + circuitsId);
             this.log.debug("deviceId: " + deviceId);
             method = "PATCH";

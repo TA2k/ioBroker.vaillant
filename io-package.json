@@ -135,7 +135,8 @@
     "fetchReports": false,
     "myv": false,
     "location": "germany",
-    "fetchReportsLimit": 100
+    "fetchReportsLimit": 100,
+    "fetchMonths": false
   },
   "objects": [],
   "instanceObjects": [

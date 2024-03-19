@@ -91,6 +91,20 @@ You can use custom Commmand remote for not predefined remotes
 
 ```json
 {
+  "url": "zone/1/cooling/operation-mode",
+  "data": { "operationMode": "DAY" }
+}
+```
+
+```json
+{
+  "url": "zone/1/cooling/setpoint",
+  "data": { "setpoint": 20 }
+}
+```
+
+```json
+{
   "url": "zone/1/heating/quick-veto",
   "data": { "desiredRoomTemperatureSetpoint": 11, "duration": 3 },
   "method": "POST"
