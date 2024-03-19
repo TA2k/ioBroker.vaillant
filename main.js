@@ -669,22 +669,14 @@ class Vaillant extends utils.Adapter {
                           native: {},
                         },
                       );
-                      this.json2iob.parse(
-                        id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + resolution === "MONTH"
-                          ? ".month"
-                          : "",
-                        res.data.data,
-                        {
-                          forceIndex: true,
-                        },
-                      );
-                      this.setState(
-                        id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + resolution === "MONTH"
-                          ? ".month"
-                          : "" + ".json",
-                        JSON.stringify(res.data.data),
-                        true,
-                      );
+                      let stateId = id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode;
+                      if (resolution === "MONTH") {
+                        stateId += ".month";
+                      }
+                      this.json2iob.parse(stateId, res.data.data, {
+                        forceIndex: true,
+                      });
+                      this.setState(stateId + ".json", JSON.stringify(res.data.data), true);
                     } else {
                       this.log.debug("No data found for " + deviceKey + "." + stats.value_type + "." + stats.operation_mode + "");
                     }
