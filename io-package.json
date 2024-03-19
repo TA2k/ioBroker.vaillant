@@ -1,11 +1,11 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.6.0",
+    "version": "0.7.0",
     "news": {
-      "0.6.0": {
-        "en": "The statistics structure have been changed. Please adopt your vis and script to the new stats structure",
-        "de": "Die Statistikstruktur wurde geändert. Bitte passen Sie Ihr Vis und Skript an die neue Statistikstruktur an",
+      "0.7.0": {
+        "en": "The statistics structure have been changed. Please adopt your vis and script to the new stats structure. Added room support",
+        "de": "Die Statistikstruktur wurde geändert. Bitte passen Sie Ihr Vis und Skript an die neue Statistikstruktur an. Raumunterstützung hinzugefügt",
         "ru": "Структура статистики была изменена. Пожалуйста, примените свой vis и скрипт к новой структуре статистики",
         "pt": "A estrutura de estatísticas foi alterada. Por favor, adote seu vis e script para a nova estrutura de estatísticas",
         "nl": "De statistiekstructuur is gewijzigd. Pas alstublieft uw vis en script aan naar de nieuwe statistiekstructuur",
