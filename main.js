@@ -673,10 +673,10 @@ class Vaillant extends utils.Adapter {
                       if (resolution === "MONTH") {
                         stateId += ".month";
                       }
-                      this.json2iob.parse(stateId, res.data.data, {
+                      this.json2iob.parse(stateId, res.data, {
                         forceIndex: true,
                       });
-                      this.setState(stateId + ".json", JSON.stringify(res.data.data), true);
+                      this.setState(stateId + ".json", JSON.stringify(res.data), true);
                     } else {
                       this.log.debug("No data found for " + deviceKey + "." + stats.value_type + "." + stats.operation_mode + "");
                     }
