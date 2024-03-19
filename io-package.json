@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "news": {
+      "0.6.0": {
+        "en": "The statistics structure have been changed. Please adopt your vis and script to the new stats structure",
+        "de": "Die Statistikstruktur wurde geändert. Bitte passen Sie Ihr Vis und Skript an die neue Statistikstruktur an",
+        "ru": "Структура статистики была изменена. Пожалуйста, примените свой vis и скрипт к новой структуре статистики",
+        "pt": "A estrutura de estatísticas foi alterada. Por favor, adote seu vis e script para a nova estrutura de estatísticas",
+        "nl": "De statistiekstructuur is gewijzigd. Pas alstublieft uw vis en script aan naar de nieuwe statistiekstructuur",
+        "fr": "La structure des statistiques a été modifiée. Veuillez adopter votre vis et votre script à la nouvelle structure des statistiques",
+        "it": "La struttura delle statistiche è stata modificata. Si prega di adattare il vis e lo script alla nuova struttura delle statistiche",
+        "es": "La estructura de estadísticas ha cambiado. Por favor, adopte su vis y script a la nueva estructura de estadísticas",
+        "pl": "Struktura statystyk została zmieniona. Proszę dostosować swój widok i skrypt do nowej struktury statystyk",
+        "uk": "Структура статистики була змінена. Будь ласка, прийміть ваш vis та скрипт до нової структури статистики",
+        "zh-cn": "统计结构已更改。请将您的vis和脚本调整为新的统计结构"
+      },
       "0.5.0": {
         "en": "Add custom command and max days for stats",
         "de": "Custom Commands hinzugefügt und max Tage für Statistiken hinzugefügt"
@@ -79,6 +92,42 @@
         "zh-cn": "首次出版"
       }
     },
+    "messages": [
+      {
+        "condition": {
+          "operand": "and",
+          "rules": ["oldVersion<0.6.0", "newVersion>=0.6.0"]
+        },
+        "title": {
+          "en": "Stats change",
+          "de": "Statistik Änderung",
+          "ru": "Изменение статистики",
+          "pt": "Alteração de estatísticas",
+          "nl": "Statistieken wijzigen",
+          "fr": "Changement de statistiques",
+          "it": "Cambiamento delle statistiche",
+          "es": "Cambio de estadísticas",
+          "pl": "Zmiana statystyk",
+          "uk": "Зміна статистики",
+          "zh-cn": "统计数据变化"
+        },
+        "text": {
+          "en": "The statistics structure have been changed. Please adopt your vis and script to the new stats structure",
+          "de": "Die Statistikstruktur wurde geändert. Bitte passen Sie Ihr Vis und Skript an die neue Statistikstruktur an",
+          "ru": "Структура статистики была изменена. Пожалуйста, примените свой vis и скрипт к новой структуре статистики",
+          "pt": "A estrutura de estatísticas foi alterada. Por favor, adote seu vis e script para a nova estrutura de estatísticas",
+          "nl": "De statistiekstructuur is gewijzigd. Pas alstublieft uw vis en script aan naar de nieuwe statistiekstructuur",
+          "fr": "La structure des statistiques a été modifiée. Veuillez adopter votre vis et votre script à la nouvelle structure des statistiques",
+          "it": "La struttura delle statistiche è stata modificata. Si prega di adattare il vis e lo script alla nuova struttura delle statistiche",
+          "es": "La estructura de estadísticas ha cambiado. Por favor, adopte su vis y script a la nueva estructura de estadísticas",
+          "pl": "Struktura statystyk została zmieniona. Proszę dostosować swój widok i skrypt do nowej struktury statystyk",
+          "uk": "Структура статистики була змінена. Будь ласка, прийміть ваш vis та скрипт до нової структури статистики",
+          "zh-cn": "统计结构已更改。请将您的vis和脚本调整为新的统计结构"
+        },
+        "level": "warn",
+        "buttons": ["agree", "cancel"]
+      }
+    ],
     "title": "Vaillant multiMATIC",
     "titleLang": {
       "en": "Vaillant multiMATIC",

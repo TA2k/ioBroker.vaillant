@@ -675,26 +675,24 @@ class Vaillant extends utils.Adapter {
                     if (res.data && res.data.data) {
                       res.data.data.sort((a, b) => (a.endDate < b.endDate ? 1 : -1));
 
-                      await this.setObjectNotExistsAsync(
-                        id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode + ".json",
-                        {
-                          type: "state",
-                          common: {
-                            name: "Json Stats",
-                            write: false,
-                            read: true,
-                            type: "string",
-                            role: "json",
-                          },
-                          native: {},
-                        },
-                      );
                       let stateId = id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode;
+
                       if (resolution === "MONTH") {
                         stateId += ".month";
                       } else {
                         stateId += ".day";
                       }
+                      await this.setObjectNotExistsAsync(stateId + ".json", {
+                        type: "state",
+                        common: {
+                          name: "Json Stats",
+                          write: false,
+                          read: true,
+                          type: "string",
+                          role: "json",
+                        },
+                        native: {},
+                      });
                       this.json2iob.parse(stateId, res.data, {
                         forceIndex: true,
                         preferedArrayName: "",

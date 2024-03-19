@@ -9,7 +9,7 @@
   "bundleDependencies": [],
   "dependencies": {
     "@iobroker/adapter-core": "^3.0.4",
-    "axios": "^1.6.7",
+    "axios": "^1.6.8",
     "http-cookie-agent": "^5.0.4",
     "json2iob": "^2.6.8",
     "qs": "^6.12.0",
@@ -21,7 +21,7 @@
   "description": "Vaillant multiMatic VR900/VR920 Adapter",
   "devDependencies": {
     "@iobroker/testing": "^4.1.1",
-    "@types/node": "^20.11.28",
+    "@types/node": "^20.11.30",
     "eslint": "^8.57.0",
     "typescript": "~5.4.2"
   },
@@ -47,5 +47,5 @@
     "test:package": "mocha test/package --exit",
     "test:unit": "mocha test/unit --exit"
   },
-  "version": "0.5.0"
+  "version": "0.6.0"
 }
