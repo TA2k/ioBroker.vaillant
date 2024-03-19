@@ -595,9 +595,9 @@ class Vaillant extends utils.Adapter {
             this.etags[url] = res.headers.etag;
           }
           this.json2iob.parse(id, res.data, {
-            forceIndex: true,
             write: true,
-            channelName: device.homeName + " " + device.productInformation,
+            channelName: "Rooms",
+            preferedArrayName: "roomConfiguration/name",
           });
         })
         .catch((error) => {
@@ -618,7 +618,7 @@ class Vaillant extends utils.Adapter {
       if (!newStatsState) {
         this.log.info("Clear old stats for " + id);
         await this.delObjectAsync(id + ".stats", { recursive: true });
-        await this.setObjectNotExistsAsync(id + ".v2", {
+        await this.extendObjectAsync(id + ".v2", {
           type: "state",
           common: {
             name: "v2",
@@ -626,6 +626,7 @@ class Vaillant extends utils.Adapter {
             read: true,
             type: "boolean",
             role: "indicator",
+            def: true,
           },
           native: {},
         });
@@ -1601,7 +1602,7 @@ class Vaillant extends utils.Adapter {
               data[command] = state.val;
               //replace uppercase with lowercase and add - between
               const urlCommand = command.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
-              url = `https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/api/v1/ambisense/facilities/${deviceId}/room/${roomIndex.val}/configuration/${urlCommand}`;
+              url = `https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/api/v1/ambisense/facilities/${deviceId}/rooms/${roomIndex.val}/configuration/${urlCommand}`;
             }
           }
           if (command === "customCommand") {
