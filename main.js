@@ -104,11 +104,13 @@ class Vaillant extends utils.Adapter {
         await this.getMyvDeviceList();
         this.log.info("Receiving first time status");
         await this.updateMyvDevices();
+        await this.updateMyvRooms();
         this.log.info("Receiving first time stats");
         await this.clearOldStats();
         await this.updateMyStats();
         this.updateInterval = setInterval(async () => {
           await this.updateMyvDevices();
+          await this.updateMyvRooms();
         }, this.config.interval * 60 * 1000);
         this.statInterval = setInterval(async () => {
           //run only between 00:00 and 00:11
@@ -551,6 +553,44 @@ class Vaillant extends utils.Adapter {
           this.log.debug(JSON.stringify(res.data));
 
           const id = device.systemId;
+          if (res.headers.etag) {
+            this.etags[url] = res.headers.etag;
+          }
+          this.json2iob.parse(id, res.data, {
+            forceIndex: true,
+            write: true,
+            channelName: device.homeName + " " + device.productInformation,
+          });
+        })
+        .catch((error) => {
+          if (error.response && error.response.status === 304) {
+            this.log.debug("No changes for " + url);
+            return;
+          }
+          this.log.error("Failed to get status for " + device.systemId);
+          this.log.error(error);
+          error.response && this.log.error(JSON.stringify(error.response.data));
+        });
+    }
+  }
+  async updateMyvRooms() {
+    for (const device of this.deviceArray) {
+      const url = `https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/api/v1/ambisense/facilities/${device.systemId}/rooms`;
+      const headers = {
+        Authorization: "Bearer " + this.session.access_token,
+      };
+      if (this.etags[url]) {
+        headers["If-None-Match"] = this.etags[url];
+      }
+      await this.requestClient({
+        method: "get",
+        url: url,
+        headers: headers,
+      })
+        .then(async (res) => {
+          this.log.debug(JSON.stringify(res.data));
+
+          const id = device.systemId + ".rooms";
           if (res.headers.etag) {
             this.etags[url] = res.headers.etag;
           }
@@ -1356,6 +1396,7 @@ class Vaillant extends utils.Adapter {
 
           if (id.split(".")[4] === "Refresh") {
             this.updateMyvDevices();
+            this.updateMyvRooms();
             return;
           }
           if (id.split(".")[4] === "RefreshStats") {
@@ -1552,6 +1593,17 @@ class Vaillant extends utils.Adapter {
             }
           }
 
+          if (id.includes(".rooms.")) {
+            const roomIndex = await this.getStateAsync(id.split(".")[2] + ".rooms." + id.split(".")[4] + ".roomIndex");
+            if (roomIndex) {
+              method = "PUT";
+              data = {};
+              data[command] = state.val;
+              //replace uppercase with lowercase and add - between
+              const urlCommand = command.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+              url = `https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/api/v1/ambisense/facilities/${deviceId}/room/${roomIndex.val}/configuration/${urlCommand}`;
+            }
+          }
           if (command === "customCommand") {
             try {
               const parsedCommand = JSON.parse(state.val);
@@ -1604,6 +1656,7 @@ class Vaillant extends utils.Adapter {
               this.refreshTimeout = setTimeout(async () => {
                 this.log.info("Update devices");
                 await this.updateMyvDevices();
+                await this.updateMyvRooms();
               }, 10 * 1000);
             })
             .catch((error) => {
