@@ -616,7 +616,7 @@ class Vaillant extends utils.Adapter {
                 const lastDateTimeStamp = new Date(toDate) - this.config.fetchReportsLimit * 24 * 60 * 60 * 1000;
                 let fromDate = new Date(lastDateTimeStamp).toISOString().replace(".000Z", "Z");
 
-                if (res === "MONTH") {
+                if (resolution === "MONTH") {
                   fromDate = stats.from;
                 }
 
@@ -672,9 +672,12 @@ class Vaillant extends utils.Adapter {
                       let stateId = id + ".stats." + deviceKey + "." + stats.value_type + "." + stats.operation_mode;
                       if (resolution === "MONTH") {
                         stateId += ".month";
+                      } else {
+                        stateId += ".day";
                       }
                       this.json2iob.parse(stateId, res.data, {
                         forceIndex: true,
+                        preferedArrayName: "",
                       });
                       this.setState(stateId + ".json", JSON.stringify(res.data), true);
                     } else {
