@@ -54,6 +54,14 @@ You can use custom Commmand remote for not predefined remotes
 
 ### Examples:
 
+## Die zone kann von 0 bis X gehen. Bitte zone/0/ oder zone/2/ testen
+
+zone/0/xxxx
+
+zone/1/xxxx
+
+zone/2/xxxx
+
 ```json
 {
   "url": "zone/1/heating/comfort-room-temperature",
@@ -100,6 +108,13 @@ You can use custom Commmand remote for not predefined remotes
 {
   "url": "zone/1/cooling/setpoint",
   "data": { "setpoint": 20 }
+}
+```
+
+```json
+{
+  "url": "ventilation/0/operation-mode",
+  "data": { "operationMode": "DAY" }
 }
 ```
 
