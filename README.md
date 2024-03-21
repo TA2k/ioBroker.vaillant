@@ -64,6 +64,13 @@ zone/2/xxxx
 
 ```json
 {
+  "url": "zone/0/heating/comfort-room-temperature",
+  "data": { "comfortRoomTemperature": 10.5 }
+}
+```
+
+```json
+{
   "url": "zone/1/heating/comfort-room-temperature",
   "data": { "comfortRoomTemperature": 10.5 }
 }
@@ -115,6 +122,13 @@ zone/2/xxxx
 {
   "url": "ventilation/0/operation-mode",
   "data": { "operationMode": "DAY" }
+}
+```
+
+```json
+{
+  "url": "ventilation/0/operation-mode",
+  "data": { "operationMode": "SET_BACK" }
 }
 ```
 
