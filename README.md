@@ -134,6 +134,20 @@ zone/2/xxxx
 
 ```json
 {
+  "url": "ventilation/0/day-fan-stage",
+  "data": { "maximumDayFanStage": 3 }
+}
+```
+
+```json
+{
+  "url": "ventilation/0/night-fan-stage",
+  "data": { "maximumNightFanStage": 2 }
+}
+```
+
+```json
+{
   "url": "zone/1/heating/quick-veto",
   "data": { "desiredRoomTemperatureSetpoint": 11, "duration": 3 },
   "method": "POST"
