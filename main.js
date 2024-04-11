@@ -30,6 +30,7 @@ class Vaillant extends utils.Adapter {
     this.on("unload", this.onUnload.bind(this));
     this.session = {};
     this.deviceArray = [];
+    this.disabledRooms = [];
     this.json2iob = new Json2iob(this);
     this.cookieJar = new tough.CookieJar();
     this.requestClient = axios.create({
@@ -280,7 +281,7 @@ class Vaillant extends utils.Adapter {
         "Accept-Language": "de-de",
         "x-client-locale": "de-DE",
         "x-idm-identifier": "KEYCLOAK",
-        "User-Agent": "myVAILLANT/13324 CFNetwork/1240.0.4 Darwin/20.6.0",
+        "User-Agent": "myVAILLANT/21469 CFNetwork/1410.1 Darwin/22.6.0",
         "Content-Type": "application/x-www-form-urlencoded",
       },
       data: qs.stringify({
@@ -411,7 +412,7 @@ class Vaillant extends utils.Adapter {
         "x-client-locale": "de-DE",
         "x-idm-identifier": "KEYCLOAK",
         "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-        "User-Agent": "myVAILLANT/13324 CFNetwork/1240.0.4 Darwin/20.6.0",
+        "User-Agent": "myVAILLANT/21469 CFNetwork/1410.1 Darwin/22.6.0",
       },
     })
       .then(async (res) => {
@@ -540,6 +541,13 @@ class Vaillant extends utils.Adapter {
 
       const headers = {
         Authorization: "Bearer " + this.session.access_token,
+        "x-app-identifier": "VAILLANT",
+        "Accept-Language": "de-de",
+        Accept: "application/json, text/plain, */*",
+        "x-client-locale": "de-DE",
+        "x-idm-identifier": "KEYCLOAK",
+        "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
+        "User-Agent": "myVAILLANT/21469 CFNetwork/1410.1 Darwin/22.6.0",
       };
       if (this.etags[url]) {
         headers["If-None-Match"] = this.etags[url];
@@ -575,9 +583,19 @@ class Vaillant extends utils.Adapter {
   }
   async updateMyvRooms() {
     for (const device of this.deviceArray) {
+      if (this.disabledRooms.includes(device.systemId)) {
+        continue;
+      }
       const url = `https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/api/v1/ambisense/facilities/${device.systemId}/rooms`;
       const headers = {
         Authorization: "Bearer " + this.session.access_token,
+        "x-app-identifier": "VAILLANT",
+        "Accept-Language": "de-de",
+        Accept: "application/json, text/plain, */*",
+        "x-client-locale": "de-DE",
+        "x-idm-identifier": "KEYCLOAK",
+        "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
+        "User-Agent": "myVAILLANT/21469 CFNetwork/1410.1 Darwin/22.6.0",
       };
       if (this.etags[url]) {
         headers["If-None-Match"] = this.etags[url];
@@ -605,9 +623,12 @@ class Vaillant extends utils.Adapter {
             this.log.debug("No changes for " + url);
             return;
           }
-          this.log.error("Failed to get status for " + device.systemId);
+
+          this.log.error("Failed to get room status for " + device.systemId);
           this.log.error(error);
           error.response && this.log.error(JSON.stringify(error.response.data));
+          this.log.info("Stop fetching of rooms until restart");
+          this.disabledRooms.push(device.systemId);
         });
     }
   }
@@ -647,7 +668,7 @@ class Vaillant extends utils.Adapter {
           "x-client-locale": "de-DE",
           "x-idm-identifier": "KEYCLOAK",
           "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-          "User-Agent": "myVAILLANT/13324 CFNetwork/1240.0.4 Darwin/20.6.0",
+          "User-Agent": "myVAILLANT/21469 CFNetwork/1410.1 Darwin/22.6.0",
         },
       })
         .then(async (res) => {
@@ -708,7 +729,7 @@ class Vaillant extends utils.Adapter {
                     "x-client-locale": "de-DE",
                     "x-idm-identifier": "KEYCLOAK",
                     "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-                    "User-Agent": "myVAILLANT/13324 CFNetwork/1240.0.4 Darwin/20.6.0",
+                    "User-Agent": "myVAILLANT/21469 CFNetwork/1410.1 Darwin/22.6.0",
                   },
                 })
                   .then(async (res) => {

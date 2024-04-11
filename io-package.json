@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.7.0",
+    "version": "0.7.1",
     "news": {
+      "0.7.1": {
+        "en": "Fix for status fetching",
+        "de": "Fix für Statusabfrage",
+        "ru": "Исправление для получения статуса",
+        "pt": "Correção para busca de status",
+        "nl": "Fix voor status ophalen",
+        "fr": "Correction pour la récupération de l'état",
+        "it": "Correzione per il recupero dello stato",
+        "es": "Corrección para la obtención de estado",
+        "pl": "Poprawka dla pobierania statusu",
+        "uk": "Виправлення для отримання статусу",
+        "zh-cn": "状态获取修复"
+      },
       "0.7.0": {
         "en": "The statistics structure have been changed. Please adopt your vis and script to the new stats structure. Added room support",
         "de": "Die Statistikstruktur wurde geändert. Bitte passen Sie Ihr Vis und Skript an die neue Statistikstruktur an. Raumunterstützung hinzugefügt",
