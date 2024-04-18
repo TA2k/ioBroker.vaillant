@@ -109,21 +109,30 @@ class Vaillant extends utils.Adapter {
         this.log.info("Receiving first time stats");
         await this.clearOldStats();
         await this.updateMyStats();
-        this.updateInterval = setInterval(async () => {
-          await this.updateMyvDevices();
-          await this.updateMyvRooms();
-        }, this.config.interval * 60 * 1000);
-        this.statInterval = setInterval(async () => {
-          //run only between 00:00 and 00:11
-          const now = new Date();
-          if (now.getHours() === 0 && now.getMinutes() < 11) {
-            await this.updateMyStats();
-          }
-        }, 10 * 60 * 1000);
+        this.updateInterval = setInterval(
+          async () => {
+            await this.updateMyvDevices();
+            await this.updateMyvRooms();
+          },
+          this.config.interval * 60 * 1000,
+        );
+        this.statInterval = setInterval(
+          async () => {
+            //run only between 00:00 and 00:11
+            const now = new Date();
+            if (now.getHours() === 0 && now.getMinutes() < 11) {
+              await this.updateMyStats();
+            }
+          },
+          10 * 60 * 1000,
+        );
       }
-      this.refreshTokenInterval = setInterval(() => {
-        this.refreshToken();
-      }, ((this.session.expires_in || 3600) - 100) * 1000);
+      this.refreshTokenInterval = setInterval(
+        () => {
+          this.refreshToken();
+        },
+        ((this.session.expires_in || 3600) - 100) * 1000,
+      );
     } else {
       this.login()
         .then(() => {
@@ -198,9 +207,12 @@ class Vaillant extends utils.Adapter {
                   this.log.error("clean configuration failed");
                 });
 
-              this.updateInterval = setInterval(() => {
-                this.updateValues();
-              }, this.config.interval * 60 * 1000);
+              this.updateInterval = setInterval(
+                () => {
+                  this.updateValues();
+                },
+                this.config.interval * 60 * 1000,
+              );
               this.log.debug("Set update interval to: " + this.config.interval + "min");
             })
             .catch(() => {
@@ -901,9 +913,12 @@ class Vaillant extends utils.Adapter {
             this.log.debug("Login successful");
             this.authenticate(reject, resolve);
             this.reauthInterval && clearInterval(this.reauthInterval);
-            this.reauthInterval = setInterval(() => {
-              this.login();
-            }, 4 * 60 * 60 * 1000); //4h;
+            this.reauthInterval = setInterval(
+              () => {
+                this.login();
+              },
+              4 * 60 * 60 * 1000,
+            ); //4h;
           } catch (error) {
             this.log.error(JSON.stringify(error));
             error && this.log.error(JSON.stringify(error.stack));
@@ -1490,7 +1505,7 @@ class Vaillant extends utils.Adapter {
             this.log.debug("zoneId: " + zoneId);
             this.log.debug("deviceId: " + deviceId);
             method = "PATCH";
-            const parameter = command;
+            let parameter = command;
             if (commands[command]) {
               parameter = commands[command].parameter;
             }
