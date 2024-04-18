@@ -700,6 +700,10 @@ class Vaillant extends utils.Adapter {
 
                 if (resolution === "MONTH") {
                   fromDate = stats.from;
+                  // fetch only last 24 month
+                  const lastDateTimeStamp = new Date(toDate);
+                  lastDateTimeStamp.setMonth(lastDateTimeStamp.getMonth() - 24);
+                  fromDate = lastDateTimeStamp.toISOString().replace(".000Z", "Z");
                 }
 
                 // startDate minus this.config.fetchReportsLimit days
