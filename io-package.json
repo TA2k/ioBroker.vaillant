@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.7.1",
+    "version": "0.7.2",
     "news": {
+      "0.7.2": {
+        "en": "fix month stats period",
+        "de": "fix für monat statistiken zeitraum",
+        "ru": "период фиксированного месяца",
+        "pt": "corrigir o período de estatísticas do mês",
+        "nl": "maandstatistieken periode oplossen",
+        "fr": "fixer la période des statistiques mensuelles",
+        "it": "periodo di statistiche del mese corretto",
+        "es": "período de las estadísticas del mes fijado",
+        "pl": "okres statystyki miesięcznej",
+        "uk": "фіксувати місяць період статистики",
+        "zh-cn": "固定月份数据周期"
+      },
       "0.7.1": {
         "en": "Fix for status fetching",
         "de": "Fix für Statusabfrage",
@@ -44,65 +57,6 @@
       "0.3.0": {
         "en": "Fix remote controls and added boost and quick veto",
         "de": "Remote Controls gefixt und Boost und quickveto hinzugefügt"
-      },
-      "0.2.1": {
-        "en": "add simple remote controls",
-        "de": "Einfache remote controls hinzufügen"
-      },
-      "0.2.0": {
-        "en": "fix for myVaillant. Complete controlling is not possible at the moment. Only mode and mode can be changed.",
-        "de": "Fix für myVaillant. Vollständige Steuerung ist derzeit nicht möglich. Nur Modus können geändert werden."
-      },
-      "0.1.3": {
-        "en": "add location config for not germany logins"
-      },
-      "0.1.2": {
-        "en": "fix refresh token"
-      },
-      "0.1.1": {
-        "en": "add myVaillant stats"
-      },
-      "0.1.0": {
-        "en": "add myVaillant support"
-      },
-      "0.0.18": {
-        "en": "fix login in error case"
-      },
-      "0.0.17": {
-        "en": "allow empty values in remote control"
-      },
-      "0.0.16": {
-        "en": "add report fetching"
-      },
-      "0.0.15": {
-        "en": "bugfixes"
-      },
-      "0.0.14": {
-        "en": "add rooms support"
-      },
-      "0.0.13": {
-        "en": "fix livereport order"
-      },
-      "0.0.11": {
-        "en": "fix issue with js-controller 3.2"
-      },
-      "0.0.10": {
-        "en": "fix issue with js-controller 3"
-      },
-      "0.0.8": {
-        "en": "Fix Authorization problem and missing configuration states"
-      },
-      "0.0.6": {
-        "en": "initial release",
-        "de": "Erstveröffentlichung",
-        "ru": "Начальная версия",
-        "pt": "lançamento inicial",
-        "nl": "Eerste uitgave",
-        "fr": "Première version",
-        "it": "Versione iniziale",
-        "es": "Versión inicial",
-        "pl": "Pierwsze wydanie",
-        "zh-cn": "首次出版"
       }
     },
     "messages": [
