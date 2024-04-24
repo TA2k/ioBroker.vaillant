@@ -963,42 +963,24 @@ class Vaillant extends utils.Adapter {
       },
     );
   }
-  cleanConfigurations() {
-    return new Promise((resolve) => {
-      if (this.config.cleantype) {
-        this.log.debug("skip clean config");
-        resolve();
-        return;
+  async cleanConfigurations() {
+    if (this.config.cleantype) {
+      this.log.debug("skip clean config");
+      return;
+    }
+    this.log.debug("clean config");
+    const pre = this.name + "." + this.instance;
+    const states = await this.getStatesAsync(pre + ".*");
+    const allIds = Object.keys(states);
+    for (const keyName of allIds) {
+      if (keyName.indexOf(".configuration") !== -1) {
+        try {
+          await this.delObjectAsync(keyName.split(".").slice(2).join("."));
+        } catch (error) {
+          this.log.debug(JSON.stringify(error));
+        }
       }
-      this.log.debug("clean config");
-      const pre = this.name + "." + this.instance;
-      this.getStates(pre + ".*", (err, states) => {
-        const allIds = Object.keys(states);
-        const promiseArray = [];
-        allIds.forEach(async (keyName) => {
-          const promise = new Promise(async (resolve, reject) => {
-            if (keyName.indexOf(".configuration") !== -1) {
-              try {
-                await this.delObjectAsync(keyName.split(".").slice(2).join("."));
-              } catch (error) {
-                this.log.debug(JSON.stringify(error));
-              }
-            }
-            resolve();
-          });
-          promiseArray.push(promise);
-        });
-        Promise.all(promiseArray)
-          .then(() => {
-            this.log.debug("clean done");
-            resolve();
-          })
-          .catch(() => {
-            this.log.error("deleting failed");
-            resolve();
-          });
-      });
-    });
+    }
   }
   getFacility() {
     return new Promise((resolve, reject) => {
@@ -1267,6 +1249,7 @@ class Vaillant extends utils.Adapter {
     });
   }
   async setMethod(id, val) {
+    // eslint-disable-next-line
     return new Promise(async (resolve, reject) => {
       const idArray = id.split(".");
       const action = idArray[idArray.length - 1];
