@@ -1674,6 +1674,10 @@ class Vaillant extends utils.Adapter {
           }
           this.log.debug(url);
           this.log.debug(JSON.stringify(data));
+          if (!url) {
+            this.log.error("No configuration supported please use customCommand");
+            return;
+          }
           await this.requestClient({
             method: method,
             url: url,
