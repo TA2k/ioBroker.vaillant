@@ -95,6 +95,11 @@ class Vaillant extends utils.Adapter {
       this.log.info("Generate new Id");
       this.config.smartPhoneId = this.makeid();
     }
+
+    if (this.config.fetchReportsLimit > 60) {
+      this.log.warn("Only 60 days of the last reports are supported. Set it back to 60 days");
+      this.config.fetchReportsLimit = 60;
+    }
     this.subscribeStates("*");
     // Reset the connection indicator during startup
     this.setState("info.connection", false, true);
