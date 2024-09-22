@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.7.2",
+    "version": "0.7.3",
     "news": {
+      "0.7.3": {
+        "en": "fix month stats period",
+        "de": "fix für monat statistiken zeitraum",
+        "ru": "период фиксированного месяца",
+        "pt": "corrigir o período de estatísticas do mês",
+        "nl": "maandstatistieken periode oplossen",
+        "fr": "fixer la période des statistiques mensuelles",
+        "it": "periodo di statistiche del mese corretto",
+        "es": "período de las estadísticas del mes fijado",
+        "pl": "okres statystyki miesięcznej",
+        "uk": "фіксувати місяць період статистики",
+        "zh-cn": "固定月份数据周期"
+      },
       "0.7.2": {
         "en": "fix month stats period",
         "de": "fix für monat statistiken zeitraum",
