@@ -128,7 +128,10 @@
     },
     "authors": ["TA2k <tombox2020@gmail.com>"],
     "keywords": ["vaillant", "multiMATIC", "VR900", "VR920"],
-    "licenseInformation": "MIT",
+    "licenseInformation": {
+      "license": "MIT",
+      "type": "free"
+    },
     "platform": "Javascript/Node.js",
     "icon": "vaillant.png",
     "enabled": true,
