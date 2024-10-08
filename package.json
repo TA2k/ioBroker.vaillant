@@ -38,7 +38,8 @@
     "vaillant",
     "multiMATIC",
     "VR900",
-    "VR920"
+    "VR920",
+    "ioBroker"
   ],
   "license": "MIT",
   "main": "main.js",

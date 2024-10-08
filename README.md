@@ -237,7 +237,13 @@ zone/2/xxxx
 
 ## Changelog
 
+### 0.7.3
+
 <!-- ### **WORK IN PROGRESS** -->
+- fix month stats period
+- initial english translation for documentation
+- formal cleanups for publishing process
+
 ### 0.7.2 (2024-04-18)
 
 - fix month stats period

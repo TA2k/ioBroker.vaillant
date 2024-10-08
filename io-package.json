@@ -62,14 +62,6 @@
       "0.4.0": {
         "en": "Fix update for non tli devices",
         "de": "Fix update für nicht tli Geräte"
-      },
-      "0.3.1": {
-        "en": "Fix login problem",
-        "de": "Loginproblem behoben"
-      },
-      "0.3.0": {
-        "en": "Fix remote controls and added boost and quick veto",
-        "de": "Remote Controls gefixt und Boost und quickveto hinzugefügt"
       }
     },
     "messages": [
@@ -108,7 +100,6 @@
         "buttons": ["agree", "cancel"]
       }
     ],
-    "title": "Vaillant multiMATIC",
     "titleLang": {
       "en": "Vaillant multiMATIC",
       "de": "Vaillant multiMATIC",
@@ -119,6 +110,7 @@
       "it": "Vaillant multiMATIC",
       "es": "Vaillant multiMATIC",
       "pl": "Vaillant multiMATIC",
+      "uk": "Vaillant multiMATIC",
       "zh-cn": "万能multiMATIC"
     },
     "desc": {
@@ -131,19 +123,20 @@
       "it": "Vaillant multiMatic VR900 / VR920 Adapter",
       "es": "Adaptador Vaillant multiMatic VR900 / VR920",
       "pl": "Adapter Vaillant multiMatic VR900 / VR920",
+      "uk": "Adapter Vaillant multiMatic VR900 / VR920",
       "zh-cn": "Vaillant multiMatic VR900 / VR920适配器"
     },
     "authors": ["TA2k <tombox2020@gmail.com>"],
     "keywords": ["vaillant", "multiMATIC", "VR900", "VR920"],
-    "license": "MIT",
+    "licenseInformation": "MIT",
     "platform": "Javascript/Node.js",
-    "main": "main.js",
     "icon": "vaillant.png",
     "enabled": true,
     "extIcon": "https://raw.githubusercontent.com/TA2k/ioBroker.vaillant/master/admin/vaillant.png",
     "readme": "https://github.com/TA2k/ioBroker.vaillant/blob/master/README.md",
     "loglevel": "info",
     "mode": "daemon",
+    "tier": 3,
     "type": "climate-control",
     "connectionType": "cloud",
     "dataSource": "poll",
@@ -151,7 +144,7 @@
     "materialize": true,
     "dependencies": [
       {
-        "js-controller": ">=1.4.2"
+        "js-controller": ">=5.0.19"
       }
     ]
   },
