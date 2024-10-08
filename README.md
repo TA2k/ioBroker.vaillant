@@ -240,6 +240,7 @@ zone/2/xxxx
 ### 0.7.3
 
 <!-- ### **WORK IN PROGRESS** -->
+- fix month stats period
 - initial english translation for documentation
 - formal cleanups for publishing process
 
