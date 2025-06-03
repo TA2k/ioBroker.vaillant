@@ -82,10 +82,12 @@ class Vaillant extends utils.Adapter {
   async onReady() {
     // Initialize your adapter here
     const obj = await this.getForeignObjectAsync("system.config");
-    if (obj && obj.native && obj.native.secret) {
-      this.config.password = this.decrypt(obj.native.secret, this.config.password);
-    } else {
-      this.config.password = this.decrypt("Zgfr56gFe87jJOM", this.config.password);
+    if (this.config.password) {
+      if (obj && obj.native && obj.native.secret) {
+        this.config.password = this.decrypt(obj.native.secret, this.config.password);
+      } else {
+        this.config.password = this.decrypt("Zgfr56gFe87jJOM", this.config.password);
+      }
     }
     if (this.config.interval < 5) {
       this.log.warn("Interval under 5min is not recommended. Set it back to 5min");
@@ -267,7 +269,7 @@ class Vaillant extends utils.Adapter {
           "Mozilla/5.0 (iPhone; CPU iPhone OS 16_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Mobile/15E148 Safari/604.1",
         "accept-language": "de-de",
       },
-      data: qs.stringify({ username: this.config.user, password: this.config.password, credentialId: "" }),
+      data: qs.stringify({ username: this.config.user, password: this.config.password_new || this.config.password, credentialId: "" }),
     })
       .then((res) => {
         this.log.debug(JSON.stringify(res.data));
@@ -330,7 +332,7 @@ class Vaillant extends utils.Adapter {
       headers: this.myvHeader,
       data: JSON.stringify({
         username: this.config.user,
-        password: this.config.password,
+        password: this.config.password_new || this.config.password,
       }),
     })
       .then((res) => {
@@ -878,13 +880,17 @@ class Vaillant extends utils.Adapter {
 
   login() {
     return new Promise((resolve, reject) => {
-      if (!this.config.password || !this.config.user) {
+      if ((!this.config.password_new && !this.config.password) || !this.config.user) {
         this.log.warn("Missing username or password");
         reject();
         return;
       }
       this.jar = request.jar();
-      const body = { smartphoneId: this.config.smartPhoneId, password: this.config.password, username: this.config.user };
+      const body = {
+        smartphoneId: this.config.smartPhoneId,
+        password: this.config.password_new || this.config.password,
+        username: this.config.user,
+      };
       this.isRelogin && this.log.debug("Start relogin");
       request.post(
         {

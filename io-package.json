@@ -151,11 +151,12 @@
       }
     ]
   },
-  "encryptedNative": ["password"],
-  "protectedNative": ["password"],
+  "encryptedNative": ["password_new"],
+  "protectedNative": ["password_new"],
   "native": {
     "user": "",
     "password": "",
+    "password_new": "",
     "interval": 15,
     "smartPhoneId": "",
     "cleantype": true,
