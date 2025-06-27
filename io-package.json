@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.7.3",
+    "version": "0.7.4",
     "news": {
+      "0.7.4": {
+        "en": "change password format",
+        "de": "passwort-format ändern",
+        "ru": "изменение формата пароля",
+        "pt": "alterar o formato da senha",
+        "nl": "wachtwoordformaat wijzigen",
+        "fr": "modifier le format du mot de passe",
+        "it": "modificare il formato password",
+        "es": "cambiar el formato de contraseña",
+        "pl": "zmienić format hasła",
+        "uk": "змінити формат пароля",
+        "zh-cn": "更改密码格式"
+      },
       "0.7.3": {
         "en": "fix month stats period",
         "de": "fix für monat statistiken zeitraum",
@@ -68,7 +81,10 @@
       {
         "condition": {
           "operand": "and",
-          "rules": ["oldVersion<0.6.0", "newVersion>=0.6.0"]
+          "rules": [
+            "oldVersion<0.6.0",
+            "newVersion>=0.6.0"
+          ]
         },
         "title": {
           "en": "Stats change",
@@ -97,7 +113,10 @@
           "zh-cn": "统计结构已更改。请将您的vis和脚本调整为新的统计结构"
         },
         "level": "warn",
-        "buttons": ["agree", "cancel"]
+        "buttons": [
+          "agree",
+          "cancel"
+        ]
       }
     ],
     "titleLang": {
@@ -126,8 +145,15 @@
       "uk": "Adapter Vaillant multiMatic VR900 / VR920",
       "zh-cn": "Vaillant multiMatic VR900 / VR920适配器"
     },
-    "authors": ["TA2k <tombox2020@gmail.com>"],
-    "keywords": ["vaillant", "multiMATIC", "VR900", "VR920"],
+    "authors": [
+      "TA2k <tombox2020@gmail.com>"
+    ],
+    "keywords": [
+      "vaillant",
+      "multiMATIC",
+      "VR900",
+      "VR920"
+    ],
     "licenseInformation": {
       "license": "MIT",
       "type": "free"
@@ -151,8 +177,12 @@
       }
     ]
   },
-  "encryptedNative": ["password_new"],
-  "protectedNative": ["password_new"],
+  "encryptedNative": [
+    "password_new"
+  ],
+  "protectedNative": [
+    "password_new"
+  ],
   "native": {
     "user": "",
     "password": "",

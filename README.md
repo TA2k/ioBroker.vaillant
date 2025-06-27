@@ -238,7 +238,7 @@ zone/2/xxxx
 ```json
 {
   "url": "cooling-for-days",
-  "data": {"value": 7},
+  "data": { "value": 7 },
   "method": "POST"
 }
 ```
@@ -251,10 +251,12 @@ zone/2/xxxx
 ```
 
 ## Changelog
+### 0.7.4 (2025-06-27)
+
+- change password format
 
 ### 0.7.3
 
-<!-- ### **WORK IN PROGRESS** -->
 - fix month stats period
 - initial english translation for documentation
 - formal cleanups for publishing process
