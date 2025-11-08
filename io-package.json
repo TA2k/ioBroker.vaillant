@@ -161,6 +161,7 @@
     "extIcon": "https://raw.githubusercontent.com/TA2k/ioBroker.vaillant/master/admin/vaillant.png",
     "readme": "https://github.com/TA2k/ioBroker.vaillant/blob/master/README.md",
     "loglevel": "info",
+    "tier": 2,
     "mode": "daemon",
     "type": "climate-control",
     "connectionType": "cloud",
