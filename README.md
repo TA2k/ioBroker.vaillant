@@ -6,94 +6,107 @@
 [![Downloads](https://img.shields.io/npm/dm/iobroker.vaillant.svg)](https://www.npmjs.com/package/iobroker.vaillant)
 ![Number of Installations (latest)](http://iobroker.live/badges/vaillant-installed.svg)
 ![Number of Installations (stable)](http://iobroker.live/badges/vaillant-stable.svg)
-[![Dependency Status](https://img.shields.io/david/TA2k/iobroker.vaillant.svg)](https://david-dm.org/TA2k/iobroker.vaillant)
+[![Dependency Status](https://img.shields.io/david/TA2k/iobroker.vaillant.svg)](https://david-dm.org/TA2k/ioBroker.vaillant)
 [![Known Vulnerabilities](https://snyk.io/test/github/TA2k/ioBroker.vaillant/badge.svg)](https://snyk.io/test/github/TA2k/ioBroker.vaillant)
 
 [![NPM](https://nodei.co/npm/iobroker.vaillant.png?downloads=true)](https://nodei.co/npm/iobroker.vaillant/)
 
-## vaillant adapter for ioBroker
+## Description
 
-Vaillant multiMatic und myVaillant Adapter
+This adapter connects [ioBroker](https://www.iobroker.net/) to **Vaillant** heating systems via **multiMATIC** (e.g. VR900 / VR920) and **myVaillant** cloud.
 
-### myVaillant (Stand ab Version 0.8.0)
+**What typically works well**
 
-#### Authentifizierung
+- **myVaillant (cloud):** login with **Keycloak / OpenID Connect and PKCE**, then **reading** system and room data, statistics (when enabled), and exposing states in the ioBroker object tree.
+- **multiMATIC:** communication with the Vaillant cloud using the credentials from the multiMATIC / senso app (same family of devices as documented in the adapter).
 
-- Produktiver Login erfolgt ausschließlich über **Keycloak / OpenID Connect mit PKCE** (`myvLoginv2`) gegen `identity.vaillant-group.com`.
-- Das **Realm** wird aus **Marke** und **Region** gebildet: `vaillant-<location>-b2c` (aktuell nur Marke `vaillant`).
-- Erlaubte Werte für **Instanzoption `location`** (Kleinbuchstaben): `germany`, `denmark`, `switzerland`, `austria`, `belgium`. Bei ungültigem Wort bricht die Realm-Ermittlung mit einer klaren Fehlermeldung ab.
-- Zum ersten **Live-Smoke-Test** empfohlen: `myv = true`, `location = germany`, `fetchReports = false`.
+The adapter mirrors cloud data into objects; changing values sends commands to the cloud where the adapter and API allow it.
 
-#### Breaking Change
+## Breaking changes
 
-- Der frühere **Okta-basierte** Anmeldepfad (`myvLogin`) ist **deaktiviert** und wirft einen Fehler mit dem Hinweis, `myvLoginv2` zu verwenden. Bestehende Setups, die noch implizit auf Okta setzten, müssen auf den Keycloak/PKCE-Flow umgestellt werden.
+- Okta-based login has been removed.
+- Only myVaillant (Keycloak) is supported.
 
-#### HTTP- und Request-Schicht (myVaillant)
+The second item applies to **myVaillant cloud login** (from adapter **0.8.0** onward: Keycloak / OIDC with PKCE). **multiMATIC / senso** operation in the adapter is separate and not removed by this change.
 
-- **Axios-Client** mit Cookie-Jar, gemeinsamen Headern und **Timeout 30 s** (`httpTimeoutMs`) für Cloud-Anfragen.
-- Alle relevanten myVaillant-Aufrufe laufen über **`myVaillantRequest`**: einheitliche Header (`buildMyVaillantHeaders` inkl. Bearer-Token), optionales `validateStatus` / `expectedStatuses`, konsistente Fehlerprotokollierung (u. a. 401, 403, 404, 409).
-- **Endpunkte** werden zentral über Hilfsfunktionen zusammengesetzt (u. a. Homes, System/Meta-Info, Räume, Statistik/EMF, Raumkonfiguration, Systembefehle mit Pfadnormalisierung und `encodeURIComponent` für IDs).
+## Requirements
 
-#### Logging
+- A running **ioBroker** installation (compatible **Node.js** version as required by your ioBroker / js-controller environment).
+- Account credentials from the **multiMATIC / senso** or **myVaillant** app (e-mail and password as configured in the adapter instance).
 
-- Antworten und Fehler für Logs werden über **`stringifyForLog`** / **`sanitizeLogData`** bereinigt, damit typische sensible Felder nicht unkontrolliert im Klartext landen.
+## Configuration
 
-#### Entwicklung / Tests
+1. Create an adapter instance and enter **e-mail** and **password** (same as in the Vaillant app you use).
+2. For **myVaillant**, set **`myv`** to `true` and configure **`location`** (region) as required (see below). Optional: set **`fetchReports`** according to your needs (e.g. `false` for a lighter first test).
+3. Additional options live under the **configuration** subtree. Some settings only take effect when the relevant mode is **ON** or **MANUAL**, not **AUTO** or **TIME_CONTROLLED** (device-dependent).
 
-- **`npm test`**: Mocha nutzt `test/mocharc.custom.json` (ersetzt veraltete `--opts`-Konfiguration).
-- **`npm run check`**: TypeScript-Prüfung mit `tsc --noEmit -p tsconfig.json`.
+### myVaillant authentication
 
-#### Sicherheit und API-Hinweis
+- myVaillant uses **Keycloak** with **PKCE** (proof key for code exchange) against Vaillant’s identity endpoint.
+- The **realm** is derived from the configured **region** (`location`): `vaillant-<location>-b2c` (brand is fixed to Vaillant in the current configuration).
+- **Supported `location` values** (lowercase): `germany`, `denmark`, `switzerland`, `austria`, `belgium`. Invalid values cause a clear configuration error.
+- For a **first live test**, using `location = germany` and disabling heavy optional polling (e.g. `fetchReports = false` where available) reduces load while verifying login.
 
-- **Keine** Zugangsdaten, Tokens oder Passwörter in Logs, Screenshots oder Tickets posten.
-- Die angebundene **Cloud-API** ist **nicht** als stabile öffentliche Schnittstelle dokumentiert; Vaillant kann sie jederzeit ändern — der Adapter kann dadurch unangekündigt unbrauchbar werden.
+The legacy **Okta** login path is **no longer available**; see [Breaking changes](#breaking-changes).
 
-### Getting started
+## Supported features
 
-In den Instanzoptionen mail und password der multimatic /senso oder myVaillant app eingeben.
+### multiMATIC examples
 
-Configuration können geändert werde in dem sie unter dem Unterpunkt configuration angepasst werden. Manche configuration werden erst angewendet wenn der Modus auf ON oder MANUAL ist und nicht AUTO oder TIME_CONTROLLED
+Replace `serialnumber` with your device serial from the object tree.
 
-## **Beispiel Mutlimatic:**
+**DHW (domestic hot water)**
 
-**Warmwasser**: vaillant.0.serialnummer.systemcontrol/tli.dhw.hotwater.configuration.hotwater_temperature_setpoint
-**Heizung**:
-Erst auf MANUAL
-vaillant.0.serialnummber.systemcontrol/tli.zones03.heating.configuration.operation_mode
-MANUAL
-Dann die Temperatur
-vaillant.0.serial.systemcontrol/tli.zones03.heating.configuration.manual_mode_temperature_setpoint
-Und am Ende operation_mode auf TIME_CONTROLLED
+`vaillant.0.serialnumber.systemcontrol/tli.dhw.hotwater.configuration.hotwater_temperature_setpoint`
 
-Parameter können über den Punkt parameterValue angepasst werden dabei beachten welche Werte im Objekt definition erlaubt sind.
+**Heating zone (example flow)**
 
-## **Beispiel myVaillant:**
+1. Set operation mode to **MANUAL**, for example:  
+   `vaillant.0.serialnumber.systemcontrol/tli.zones03.heating.configuration.operation_mode` → `MANUAL`
+2. Set temperature, for example:  
+   `vaillant.0.serialnumber.systemcontrol/tli.zones03.heating.configuration.manual_mode_temperature_setpoint`
+3. Set `operation_mode` back to **TIME_CONTROLLED** when finished.
 
-vaillant.0.id.systemControlState.controlState.domesticHotWater01.boost auf true/false setzen um den Boost zu aktivieren oder deaktivieren
-vaillant.0.id.systemControlState.controlState.zones01.desiredRoomTemperatureSetpoint um die RaumTemperatur zu setzen
-vaillant.0.id.systemControlState.controlState.zones01.setBackTemperature
-vaillant.0.id.systemControlState.controlState.zones01.heatingOperationMode OFF MANUAL TIME_CONTROLLED
-vaillant.0.id.systemControlState.controlState.domesticHotWater01.operationMode OFF MANUAL TIME_CONTROLLED
+Parameters can be adjusted via **`parameterValue`** where present; always respect allowed values from the object’s **definition** / native metadata.
 
-## Remote Commands
+### myVaillant examples
 
-For Refresh and predefined
-`vaillant.0.id.remote`
+Replace `id` with your system id from the object tree.
 
-## Custom Command
+- DHW boost: `vaillant.0.id.systemControlState.controlState.domesticHotWater01.boost` → `true` / `false`
+- Room setpoint: `vaillant.0.id.systemControlState.controlState.zones01.desiredRoomTemperatureSetpoint`
+- Setback: `vaillant.0.id.systemControlState.controlState.zones01.setBackTemperature`
+- Zone heating mode: `vaillant.0.id.systemControlState.controlState.zones01.heatingOperationMode` — values include `OFF`, `MANUAL`, `TIME_CONTROLLED`
+- DHW operation mode: `vaillant.0.id.systemControlState.controlState.domesticHotWater01.operationMode` — `OFF`, `MANUAL`, `TIME_CONTROLLED`
 
-You can use custom Commmand remote for not predefined remotes
-`vaillant.0.id.remotes.customCommand`
+### Remote commands
 
-### Examples:
+- Predefined / refresh-related: `vaillant.0.id.remote`
+- **Custom Command** (URLs not covered by predefined remotes): `vaillant.0.id.remotes.customCommand`
 
-## Die zone kann von 0 bis X gehen. Bitte zone/0/ oder zone/2/ testen
+## Limitations and warnings
 
-zone/0/xxxx
+### Unofficial cloud API
 
-zone/1/xxxx
+This adapter uses an unofficial Vaillant cloud API and may break at any time.
 
-zone/2/xxxx
+### Writes and safety
+
+Read functionality has been tested. Write commands should be used carefully and may affect heating configuration.
+
+**Additional notes**
+
+- Vaillant does not publish a stable public contract for the cloud endpoints used here; behaviour can change without notice.
+- Write operations (object writes, custom commands) depend on device type, firmware, and region.
+- Do **not** post passwords, refresh tokens, or access tokens in logs, screenshots, or support tickets.
+
+## Custom Command examples (experimental)
+
+The JSON examples below show payloads for **`customCommand`**. They are **illustrative**; paths and allowed values depend on your installation.
+
+**Important:** treat **all write-style operations** as **experimental** and **not fully verified** across all devices. Verify impact on a test instance or maintenance window before relying on them in production.
+
+Zone indices are **0 … n**; try `zone/0/...` or `zone/2/...` if one path does not match your system.
 
 ```json
 {
@@ -283,64 +296,72 @@ zone/2/xxxx
 }
 ```
 
+## Development notes
+
+- `npm test` — runs Mocha using `test/mocharc.custom.json`.
+- `npm run check` — TypeScript check: `tsc --noEmit -p tsconfig.json`.
+- `npm run lint` — ESLint on the project tree.
+
 ## Changelog
 
 <!-- ### **WORK IN PROGRESS** -->
+
 ### 0.8.0 (2026-05-04)
 
-- myVaillant: Login stabil über **Keycloak / OIDC mit PKCE** (`myvLoginv2`); Realm aus konfigurierter **Region** (`location`).
-- **Breaking:** alter **Okta-Flow** (`myvLogin`) entfernt bzw. deaktiviert.
-- myVaillant: **einheitliche Request-Schicht** (`myVaillantRequest`), gemeinsame **Header** und **HTTP-Timeout**; **zentrale Endpoint-Hilfen** für Homes, Systeme, Statistik, Räume und Befehle.
-- **Logging:** Ausgaben für Logs über Bereinigung/Hilfsfunktionen weniger anfällig für sensible Daten.
-- **Tests:** Mocha-Konfiguration `test/mocharc.custom.json`; `npm run check` gegen `tsconfig.json`.
-- README: Dokumentation der genannten Punkte und Betriebshinweise.
+- myVaillant: stable login via **Keycloak / OIDC with PKCE**; realm from configured **region** (`location`).
+- **Breaking:** legacy **Okta** login path removed / disabled.
+- myVaillant: unified HTTP handling (shared client timeout, headers, and structured API paths for homes, systems, statistics, rooms, and commands).
+- Logging helpers reduce accidental exposure of sensitive fields in log output.
+- Tests: Mocha config in `test/mocharc.custom.json`; `npm run check` uses `tsconfig.json`.
+- README: structure, English documentation, and operational notes.
 
 ### 0.7.5 (2025-07-09)
- - revert change to fix save issue
+
+- Revert change to fix save issue
 
 ### 0.7.2 (2024-04-18)
 
-- fix month stats period
+- Fix month stats period
 
 ### 0.3.0
 
-- add boost
+- Add boost
 
 ### 0.1.2
 
-- fix refresh token
+- Fix refresh token
 
 ### 0.1.1
 
-- add myvaillant support and stats
+- Add myVaillant support and stats
 
 ### 0.0.15
 
-- bugfixes
+- Bugfixes
 
 ### 0.0.14
 
-- add rooms support
+- Add rooms support
 
 ### 0.0.13
 
-- fix livereport order
+- Fix livereport order
 
 ### 0.0.11
 
-- fix issue with js-controller 3.2
+- Fix issue with js-controller 3.2
 
 ### 0.0.10
 
-- fix issue with js-controller 3
+- Fix issue with js-controller 3
 
 ### 0.0.8
 
-- (TA2k) Fix Authorization problem and missing configuration states
+- (TA2k) Fix authorization problem and missing configuration states
 
 ### 0.0.6
 
-- (TA2k) initial release
+- (TA2k) Initial release
 
 ## License
 
