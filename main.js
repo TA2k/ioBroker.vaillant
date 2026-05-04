@@ -31,6 +31,7 @@ class Vaillant extends utils.Adapter {
     this.session = {};
     this.deviceArray = [];
     this.disabledRooms = [];
+    this.disabledPv = [];
     this.json2iob = new Json2iob(this);
     this.cookieJar = new tough.CookieJar();
     this.requestClient = axios.create({
@@ -111,13 +112,16 @@ class Vaillant extends utils.Adapter {
         this.log.info("Receiving first time status");
         await this.updateMyvDevices();
         await this.updateMyvRooms();
+        await this.updateMyvPvData();
         this.log.info("Receiving first time stats");
         await this.clearOldStats();
         await this.updateMyStats();
+        await this.updateMyvEfficiency();
         this.updateInterval = setInterval(
           async () => {
             await this.updateMyvDevices();
             await this.updateMyvRooms();
+            await this.updateMyvPvData();
           },
           this.config.interval * 60 * 1000,
         );
@@ -127,6 +131,7 @@ class Vaillant extends utils.Adapter {
             const now = new Date();
             if (now.getHours() === 0 && now.getMinutes() < 11) {
               await this.updateMyStats();
+              await this.updateMyvEfficiency();
             }
           },
           10 * 60 * 1000,
@@ -591,15 +596,15 @@ class Vaillant extends utils.Adapter {
               // await this.sleep(5000);
               for (const resolution of resolutions) {
                 const toDate = stats.to;
-                const lastDateTimeStamp = new Date(toDate) - this.config.fetchReportsLimit * 24 * 60 * 60 * 1000;
-                let fromDate = new Date(lastDateTimeStamp).toISOString().replace(".000Z", "Z");
+                let fromDate;
 
                 if (resolution === "MONTH") {
-                  fromDate = stats.from;
-                  // fetch only last 12 month
-                  const lastDateTimeStamp = new Date(toDate);
-                  lastDateTimeStamp.setMonth(lastDateTimeStamp.getMonth() - 12);
-                  fromDate = lastDateTimeStamp.toISOString().replace(".000Z", "Z");
+                  const lastMonthDate = new Date(toDate);
+                  lastMonthDate.setMonth(lastMonthDate.getMonth() - 12);
+                  fromDate = lastMonthDate.toISOString().replace(".000Z", "Z");
+                } else {
+                  const lastDateTimeStamp = new Date(toDate) - this.config.fetchReportsLimit * 24 * 60 * 60 * 1000;
+                  fromDate = new Date(lastDateTimeStamp).toISOString().replace(".000Z", "Z");
                 }
 
                 // startDate minus this.config.fetchReportsLimit days
@@ -666,6 +671,84 @@ class Vaillant extends utils.Adapter {
           }
         })
         .catch((error) => {
+          this.log.error(error);
+          error.response && this.log.error(JSON.stringify(error.response.data));
+        });
+    }
+  }
+  async updateMyvEfficiency() {
+    for (const device of this.deviceArray) {
+      const id = device.systemId;
+      const now = new Date();
+      const startDate = new Date(now.getFullYear(), 0, 1).toISOString().replace(".000Z", "Z");
+      const endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59).toISOString().replace(".000Z", "Z");
+      const url =
+        "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/emf/v2/" +
+        id +
+        "/currentSystemWithEfficiency?startDate=" +
+        encodeURIComponent(startDate) +
+        "&endDate=" +
+        encodeURIComponent(endDate) +
+        "&operationModes=HEATING&operationModes=COOLING&operationModes=DOMESTIC_HOT_WATER";
+      await this.requestClient({
+        method: "get",
+        url: url,
+        headers: {
+          Authorization: "Bearer " + this.session.access_token,
+        },
+      })
+        .then(async (res) => {
+          this.log.debug(JSON.stringify(res.data));
+          await this.setObjectNotExistsAsync(id + ".stats.efficiency", {
+            type: "channel",
+            common: {
+              name: "Efficiency",
+            },
+            native: {},
+          });
+          this.json2iob.parse(id + ".stats.efficiency", res.data, { forceIndex: true });
+        })
+        .catch((error) => {
+          if (error.response && error.response.status === 404) {
+            this.log.debug("No efficiency data for " + id);
+            return;
+          }
+          this.log.error(error);
+          error.response && this.log.error(JSON.stringify(error.response.data));
+        });
+    }
+  }
+  async updateMyvPvData() {
+    for (const device of this.deviceArray) {
+      if (this.disabledPv.includes(device.systemId)) {
+        continue;
+      }
+      const id = device.systemId;
+      const url = "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/rts/" + id + "/currentPvData";
+      await this.requestClient({
+        method: "get",
+        url: url,
+        headers: {
+          Authorization: "Bearer " + this.session.access_token,
+        },
+      })
+        .then(async (res) => {
+          this.log.debug(JSON.stringify(res.data));
+          await this.setObjectNotExistsAsync(id + ".pvData", {
+            type: "channel",
+            common: {
+              name: "PV Data",
+            },
+            native: {},
+          });
+          this.json2iob.parse(id + ".pvData", res.data, { forceIndex: true });
+        })
+        .catch((error) => {
+          if (error.response && error.response.status === 404) {
+            this.log.debug("No PV data for " + id + " - disabling");
+            this.disabledPv.push(device.systemId);
+            return;
+          }
           this.log.error(error);
           error.response && this.log.error(JSON.stringify(error.response.data));
         });
@@ -1136,7 +1219,7 @@ class Vaillant extends utils.Adapter {
       const idArray = id.split(".");
       const action = idArray[idArray.length - 1];
       const idPath = id.split(".").splice(2).slice(0, 3);
-      let path = [];
+      let path;
       let url = "";
       let body = {};
       if (id.indexOf("configuration") !== -1) {
@@ -1155,7 +1238,7 @@ class Vaillant extends utils.Adapter {
             "https://smart.vaillant.com/mobile/api/v4/facilities/" + this.serialNr + "/rbr/v1/rooms/" + roomId + "/configuration/" + action;
         }
         body[action] = val;
-        if ((val = "" || val === null || val === undefined)) {
+        if (val === "" || val === null || val === undefined) {
           body = null;
         }
 
@@ -1236,15 +1319,13 @@ class Vaillant extends utils.Adapter {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
   getCodeChallenge() {
-    let hash = "";
-    let result = "";
     const chars = "0123456789abcdef";
-    result = "";
-    for (let i = 64; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
-    hash = crypto.createHash("sha256").update(result).digest("base64");
+    let codeVerifier = "";
+    for (let i = 64; i > 0; --i) codeVerifier += chars[Math.floor(Math.random() * chars.length)];
+    let hash = crypto.createHash("sha256").update(codeVerifier).digest("base64");
     hash = hash.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 
-    return [result, hash];
+    return [codeVerifier, hash];
   }
   /**
   async receiveReports() {
@@ -1284,7 +1365,7 @@ class Vaillant extends utils.Adapter {
       this.reloginTimeout && clearTimeout(this.reloginTimeout);
       this.refreshTokenInterval && clearInterval(this.refreshTokenInterval);
       callback();
-    } catch (e) {
+    } catch {
       callback();
     }
   }
