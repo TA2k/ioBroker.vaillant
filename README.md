@@ -15,16 +15,38 @@
 
 Vaillant multiMatic und myVaillant Adapter
 
-### myVaillant auth flow (current)
+### myVaillant (Stand ab Version 0.8.0)
 
-- myVaillant nutzt Keycloak/OIDC mit PKCE (`myvLoginv2`).
-- Der alte Okta-Flow ist deaktiviert und wird nicht mehr automatisch verwendet.
-- Fuer ersten Live-Smoke-Test empfohlen:
-  - `myv = true`
-  - `location = germany`
-  - `fetchReports = false`
-- Sicherheitsregel: Keine Secrets/Tokens/Passwoerter in Logs oder Tickets uebernehmen.
-- Hinweis: Die Cloud-API ist inoffiziell und kann sich jederzeit aendern oder brechen.
+#### Authentifizierung
+
+- Produktiver Login erfolgt ausschließlich über **Keycloak / OpenID Connect mit PKCE** (`myvLoginv2`) gegen `identity.vaillant-group.com`.
+- Das **Realm** wird aus **Marke** und **Region** gebildet: `vaillant-<location>-b2c` (aktuell nur Marke `vaillant`).
+- Erlaubte Werte für **Instanzoption `location`** (Kleinbuchstaben): `germany`, `denmark`, `switzerland`, `austria`, `belgium`. Bei ungültigem Wort bricht die Realm-Ermittlung mit einer klaren Fehlermeldung ab.
+- Zum ersten **Live-Smoke-Test** empfohlen: `myv = true`, `location = germany`, `fetchReports = false`.
+
+#### Breaking Change
+
+- Der frühere **Okta-basierte** Anmeldepfad (`myvLogin`) ist **deaktiviert** und wirft einen Fehler mit dem Hinweis, `myvLoginv2` zu verwenden. Bestehende Setups, die noch implizit auf Okta setzten, müssen auf den Keycloak/PKCE-Flow umgestellt werden.
+
+#### HTTP- und Request-Schicht (myVaillant)
+
+- **Axios-Client** mit Cookie-Jar, gemeinsamen Headern und **Timeout 30 s** (`httpTimeoutMs`) für Cloud-Anfragen.
+- Alle relevanten myVaillant-Aufrufe laufen über **`myVaillantRequest`**: einheitliche Header (`buildMyVaillantHeaders` inkl. Bearer-Token), optionales `validateStatus` / `expectedStatuses`, konsistente Fehlerprotokollierung (u. a. 401, 403, 404, 409).
+- **Endpunkte** werden zentral über Hilfsfunktionen zusammengesetzt (u. a. Homes, System/Meta-Info, Räume, Statistik/EMF, Raumkonfiguration, Systembefehle mit Pfadnormalisierung und `encodeURIComponent` für IDs).
+
+#### Logging
+
+- Antworten und Fehler für Logs werden über **`stringifyForLog`** / **`sanitizeLogData`** bereinigt, damit typische sensible Felder nicht unkontrolliert im Klartext landen.
+
+#### Entwicklung / Tests
+
+- **`npm test`**: Mocha nutzt `test/mocharc.custom.json` (ersetzt veraltete `--opts`-Konfiguration).
+- **`npm run check`**: TypeScript-Prüfung mit `tsc --noEmit -p tsconfig.json`.
+
+#### Sicherheit und API-Hinweis
+
+- **Keine** Zugangsdaten, Tokens oder Passwörter in Logs, Screenshots oder Tickets posten.
+- Die angebundene **Cloud-API** ist **nicht** als stabile öffentliche Schnittstelle dokumentiert; Vaillant kann sie jederzeit ändern — der Adapter kann dadurch unangekündigt unbrauchbar werden.
 
 ### Getting started
 
@@ -144,7 +166,7 @@ zone/2/xxxx
 ```
 
 ```json
-{w
+{
   "url": "ventilation/0/day-fan-stage",
   "data": { "maximumDayFanStage": 3 }
 }
@@ -264,6 +286,15 @@ zone/2/xxxx
 ## Changelog
 
 <!-- ### **WORK IN PROGRESS** -->
+### 0.8.0 (2026-05-04)
+
+- myVaillant: Login stabil über **Keycloak / OIDC mit PKCE** (`myvLoginv2`); Realm aus konfigurierter **Region** (`location`).
+- **Breaking:** alter **Okta-Flow** (`myvLogin`) entfernt bzw. deaktiviert.
+- myVaillant: **einheitliche Request-Schicht** (`myVaillantRequest`), gemeinsame **Header** und **HTTP-Timeout**; **zentrale Endpoint-Hilfen** für Homes, Systeme, Statistik, Räume und Befehle.
+- **Logging:** Ausgaben für Logs über Bereinigung/Hilfsfunktionen weniger anfällig für sensible Daten.
+- **Tests:** Mocha-Konfiguration `test/mocharc.custom.json`; `npm run check` gegen `tsconfig.json`.
+- README: Dokumentation der genannten Punkte und Betriebshinweise.
+
 ### 0.7.5 (2025-07-09)
  - revert change to fix save issue
 
