@@ -48,14 +48,14 @@
     "url": "git+https://github.com/TA2k/ioBroker.vaillant.git"
   },
   "scripts": {
-    "test:js": "mocha --config test/mocharc.custom.json \"{!(node_modules|test)/**/*.test.js,*.test.js,test/**/test!(PackageFiles|Startup).js}\"",
+    "test:js": "mocha --config test/mocharc.custom.json",
     "test:package": "mocha test/package --exit",
     "test:integration": "mocha test/integration --exit",
     "test": "npm run test:js && npm run test:package",
-    "check": "tsc --noEmit -p tsconfig.check.json",
+    "check": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "translate": "translate-adapter",
     "release": "release-script --all"
   },
-  "version": "0.7.5"
+  "version": "0.8.0"
 }

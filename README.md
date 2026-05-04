@@ -15,6 +15,17 @@
 
 Vaillant multiMatic und myVaillant Adapter
 
+### myVaillant auth flow (current)
+
+- myVaillant nutzt Keycloak/OIDC mit PKCE (`myvLoginv2`).
+- Der alte Okta-Flow ist deaktiviert und wird nicht mehr automatisch verwendet.
+- Fuer ersten Live-Smoke-Test empfohlen:
+  - `myv = true`
+  - `location = germany`
+  - `fetchReports = false`
+- Sicherheitsregel: Keine Secrets/Tokens/Passwoerter in Logs oder Tickets uebernehmen.
+- Hinweis: Die Cloud-API ist inoffiziell und kann sich jederzeit aendern oder brechen.
+
 ### Getting started
 
 In den Instanzoptionen mail und password der multimatic /senso oder myVaillant app eingeben.

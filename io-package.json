@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "vaillant",
-    "version": "0.7.5",
+    "version": "0.8.0",
     "news": {
+      "0.8.0": {
+        "en": "myVaillant Keycloak/PKCE stabilized; Okta flow removed; request layer unified",
+        "de": "myVaillant Keycloak/PKCE stabilisiert; Okta-Flow entfernt; Request-Schicht vereinheitlicht",
+        "ru": "",
+        "pt": "",
+        "nl": "",
+        "fr": "",
+        "it": "",
+        "es": "",
+        "pl": "",
+        "uk": "",
+        "zh-cn": ""
+      },
       "0.7.5": {
         "en": "revert change to fix save issue",
         "de": "revert-änderung zu beheben speicherproblem",
