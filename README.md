@@ -22,7 +22,7 @@ This adapter connects ioBroker to Vaillant heating systems via the myVaillant cl
 * ioBroker installation
 * myVaillant account
 * Vaillant system connected to the cloud
-* Supported location (e.g. germany)
+* Supported location, for example `germany`
 
 ---
 
@@ -30,69 +30,79 @@ This adapter connects ioBroker to Vaillant heating systems via the myVaillant cl
 
 Set the following values in the adapter configuration:
 
+```text
 myv = true
 user = your email
 password = your password
 location = germany
-fetchReports = false (recommended for first setup)
+fetchReports = false
+```
+
+`fetchReports = false` is recommended for the first smoke test to reduce API load.
 
 ---
 
 ## Supported Features
 
-* Login via myVaillant (Keycloak / PKCE)
+* Login via myVaillant using Keycloak / PKCE
 * Discover available systems
 * Read system status
-* Read statistics (if enabled)
-* Create ioBroker states from API data
+* Read statistics if enabled
+* Create ioBroker states from received API data
 
 ---
 
 ## Write Commands / Experimental
 
-⚠️ Write commands may change heating behavior.
-Use them carefully. Read functionality has been verified; write functionality may require additional testing.
+> ⚠️ Write commands may change heating behavior.
+> Use them carefully. Read functionality has been verified; write functionality may require additional testing depending on the system.
 
 ### Example: Set room temperature
 
 Sets a temporary override temperature for a heating zone.
 
+```json
 {
-"quickVeto": {
-"setpoint": 22,
-"duration": 3600
+  "quickVeto": {
+    "setpoint": 22,
+    "duration": 3600
+  }
 }
-}
+```
 
 ### Example: Activate away mode
 
-Switches system into away mode.
+Switches the system into away mode.
 
+```json
 {
-"awayMode": {
-"active": true
+  "awayMode": {
+    "active": true
+  }
 }
-}
+```
 
 ### Example: Custom command
 
-Advanced users can send custom API payloads.
+Advanced users can send custom API payloads. This is experimental and may not work on all systems.
 
+```json
 {
-"customCommand": {
-"method": "PATCH",
-"url": "/systems/12345/zones/67890",
-"data": {
-"desiredRoomTemperatureSetpoint": 21
+  "customCommand": {
+    "method": "PATCH",
+    "url": "/systems/12345/zones/67890",
+    "data": {
+      "desiredRoomTemperatureSetpoint": 21
+    }
+  }
 }
-}
-}
+```
 
 ---
 
 ## Limitations and Warnings
 
-* This adapter uses an unofficial Vaillant cloud API
+* This adapter uses an **unofficial Vaillant cloud API**
 * The API may change at any time without notice
 * The adapter depends on Vaillant cloud availability
 * Write commands can affect heating configuration
@@ -106,7 +116,7 @@ Advanced users can send custom API payloads.
 ### 0.8.0
 
 * Okta-based login has been removed
-* Only myVaillant (Keycloak / PKCE) is supported
+* Only myVaillant using Keycloak / PKCE is supported
 * Legacy cloud behavior may no longer work
 
 ---
@@ -114,5 +124,5 @@ Advanced users can send custom API payloads.
 ## Notes
 
 * multiMATIC / sensoAPP legacy support is not actively maintained
-* Focus is on myVaillant cloud integration
+* The current focus is myVaillant cloud integration
 * Contributions and testing feedback are welcome
