@@ -29,12 +29,17 @@ class Vaillant extends utils.Adapter {
     this.on("stateChange", this.onStateChange.bind(this));
     this.on("unload", this.onUnload.bind(this));
     this.session = {};
+    this.myVaillantApiBase = "https://api.vaillant-group.com/service-connected-control";
+    this.myVaillantEndUserBase = `${this.myVaillantApiBase}/end-user-app-api/v1`;
+    this.myVaillantVrc700Base = `${this.myVaillantApiBase}/vrc700/v1`;
     this.deviceArray = [];
     this.disabledRooms = [];
     this.json2iob = new Json2iob(this);
+    this.httpTimeoutMs = 30000;
     this.cookieJar = new tough.CookieJar();
     this.requestClient = axios.create({
       withCredentials: true,
+      timeout: this.httpTimeoutMs,
       httpsAgent: new HttpsCookieAgent({
         cookies: {
           jar: this.cookieJar,
@@ -116,6 +121,7 @@ class Vaillant extends utils.Adapter {
         await this.updateMyStats();
         this.updateInterval = setInterval(
           async () => {
+            // TODO: Add retry/backoff strategy for cloud polling when repeated API failures occur.
             await this.updateMyvDevices();
             await this.updateMyvRooms();
           },
@@ -186,7 +192,7 @@ class Vaillant extends utils.Adapter {
                   await this.getMethod("https://smart.vaillant.com/mobile/api/v4/facilities/$serial/emf/v1/devices/", "emf").catch(() =>
                     this.log.debug("Failed to get emf"),
                   );
-                  this.log.debug(JSON.stringify(this.reports));
+                  this.log.debug(this.stringifyForLog(this.reports));
 
                   await this.sleep(10000);
 
@@ -230,27 +236,198 @@ class Vaillant extends utils.Adapter {
     }
     // in this template all states changes inside the adapters namespace are subscribed
   }
+  buildMyVaillantRealm(location, brand = "vaillant") {
+    const normalizedBrand = String(brand || "")
+      .trim()
+      .toLowerCase();
+    const normalizedLocation = String(location || "")
+      .trim()
+      .toLowerCase();
+    const allowedBrands = new Set(["vaillant"]);
+    const allowedLocations = new Set(["germany", "denmark", "switzerland", "austria", "belgium"]);
+    if (!allowedBrands.has(normalizedBrand)) {
+      throw new Error(`Unsupported myVAILLANT brand: ${brand}`);
+    }
+    if (!allowedLocations.has(normalizedLocation)) {
+      throw new Error(
+        `Invalid myVAILLANT location "${location}". Supported values: germany, denmark, switzerland, austria, belgium`,
+      );
+    }
+    return `${normalizedBrand}-${normalizedLocation}-b2c`;
+  }
+  getMyVaillantRealm() {
+    return this.buildMyVaillantRealm(this.config.location, "vaillant");
+  }
+  buildMyVaillantHeaders(token, extraHeaders = {}) {
+    const headers = {
+      Accept: "application/json, text/plain, */*",
+      "x-app-identifier": "VAILLANT",
+      "Accept-Language": "de-de",
+      "x-client-locale": "de-DE",
+      "x-idm-identifier": "KEYCLOAK",
+      "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
+      "User-Agent": "myVAILLANT/21469 CFNetwork/1410.1 Darwin/22.6.0",
+      ...extraHeaders,
+    };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    return headers;
+  }
+  getMyVaillantApiBase() {
+    return this.myVaillantApiBase;
+  }
+  getMyVaillantEndUserBase() {
+    return this.myVaillantEndUserBase;
+  }
+  getMyVaillantVrc700Base() {
+    return this.myVaillantVrc700Base;
+  }
+  ensureMyVaillantSegment(value, name) {
+    const normalizedValue = String(value || "").trim();
+    if (!normalizedValue) {
+      throw new Error(`Missing myVAILLANT ${name}`);
+    }
+    return encodeURIComponent(normalizedValue);
+  }
+  normalizeMyVaillantPath(path = "") {
+    return String(path || "")
+      .replace(/^\/+/, "")
+      .replace(/\/+$/, "");
+  }
+  getHomesEndpoint() {
+    return `${this.getMyVaillantEndUserBase()}/homes`;
+  }
+  getControlIdentifierEndpoint(systemId) {
+    const encodedSystemId = this.ensureMyVaillantSegment(systemId, "systemId");
+    return `${this.getMyVaillantEndUserBase()}/systems/${encodedSystemId}/meta-info/control-identifier`;
+  }
+  getSystemEndpoint(identifier, systemId) {
+    const encodedIdentifier = this.ensureMyVaillantSegment(identifier, "identifier");
+    const encodedSystemId = this.ensureMyVaillantSegment(systemId, "systemId");
+    if (identifier === "tli") {
+      return `${this.getMyVaillantEndUserBase()}/systems/${encodedSystemId}/${encodedIdentifier}`;
+    }
+    return `${this.getMyVaillantApiBase()}/${encodedIdentifier}/v1/systems/${encodedSystemId}`;
+  }
+  getRoomsEndpoint(facilityId) {
+    const encodedFacilityId = this.ensureMyVaillantSegment(facilityId, "facilityId");
+    return `${this.getMyVaillantEndUserBase()}/api/v1/ambisense/facilities/${encodedFacilityId}/rooms`;
+  }
+  getStatsEndpoint(systemId) {
+    const encodedSystemId = this.ensureMyVaillantSegment(systemId, "systemId");
+    return `${this.getMyVaillantEndUserBase()}/emf/v2/${encodedSystemId}/currentSystem`;
+  }
+  getStatsBucketsEndpoint(systemId, deviceUuid, query) {
+    const encodedSystemId = this.ensureMyVaillantSegment(systemId, "systemId");
+    const encodedDeviceUuid = this.ensureMyVaillantSegment(deviceUuid, "deviceUuid");
+    const search = new URLSearchParams({
+      resolution: String(query.resolution),
+      operationMode: String(query.operationMode),
+      energyType: String(query.energyType),
+      startDate: String(query.startDate),
+      endDate: String(query.endDate),
+    }).toString();
+    return `${this.getMyVaillantEndUserBase()}/emf/v2/${encodedSystemId}/devices/${encodedDeviceUuid}/buckets?${search}`;
+  }
+  buildSystemCommandEndpoint(identifier, systemId, path, useTliPrefix = true) {
+    const encodedSystemId = this.ensureMyVaillantSegment(systemId, "systemId");
+    const normalizedPath = this.normalizeMyVaillantPath(path);
+    if (!normalizedPath) {
+      throw new Error("Missing myVAILLANT command path");
+    }
+    if (identifier === "tli") {
+      const tliPrefix = useTliPrefix ? "/tli" : "";
+      return `${this.getMyVaillantEndUserBase()}/systems/${encodedSystemId}${tliPrefix}/${normalizedPath}`;
+    }
+    const encodedIdentifier = this.ensureMyVaillantSegment(identifier, "identifier");
+    return `${this.getMyVaillantApiBase()}/${encodedIdentifier}/v1/systems/${encodedSystemId}/${normalizedPath}`;
+  }
+  getRoomConfigurationEndpoint(facilityId, roomIndex, urlCommand) {
+    const encodedFacilityId = this.ensureMyVaillantSegment(facilityId, "facilityId");
+    const encodedRoomIndex = this.ensureMyVaillantSegment(roomIndex, "roomIndex");
+    const normalizedCommand = this.normalizeMyVaillantPath(urlCommand);
+    if (!normalizedCommand) {
+      throw new Error("Missing myVAILLANT room configuration command");
+    }
+    return `${this.getMyVaillantEndUserBase()}/api/v1/ambisense/facilities/${encodedFacilityId}/rooms/${encodedRoomIndex}/configuration/${normalizedCommand}`;
+  }
+  // Example outputs:
+  // getHomesEndpoint() => https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/homes
+  // getSystemEndpoint("tli","123") => https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/123/tli
+  async myVaillantRequest(options) {
+    const {
+      method,
+      url,
+      data,
+      body,
+      params,
+      extraHeaders = {},
+      expectedStatuses,
+      timeout,
+      ...rest
+    } = options;
+    const requestData = data !== undefined ? data : body;
+    const validateStatus = Array.isArray(expectedStatuses)
+      ? (status) => (status >= 200 && status < 300) || expectedStatuses.includes(status)
+      : undefined;
+    try {
+      return await this.requestClient({
+        method,
+        url,
+        data: requestData,
+        params,
+        timeout: timeout || this.httpTimeoutMs,
+        headers: this.buildMyVaillantHeaders(this.session.access_token, extraHeaders),
+        validateStatus,
+        ...rest,
+      });
+    } catch (error) {
+      const statusCode = error && error.response ? error.response.status : undefined;
+      if (statusCode === 401) {
+        this.log.warn(`myVAILLANT request unauthorized (401): ${method} ${url}`);
+      } else if (statusCode === 403) {
+        this.log.warn(`myVAILLANT request forbidden (403): ${method} ${url}`);
+      } else if (statusCode === 404) {
+        this.log.info(`myVAILLANT request not found (404): ${method} ${url}`);
+      } else if (statusCode === 409) {
+        this.log.info(`myVAILLANT request conflict (409): ${method} ${url}`);
+      } else {
+        this.log.debug(`myVAILLANT request failed: ${method} ${url}`);
+      }
+      this.log.error(this.stringifyForLog(error));
+      error.response && this.log.error(this.stringifyForLog(error.response.data));
+      throw error;
+    }
+  }
   async myvLoginv2() {
     const [code_verifier, codeChallenge] = this.getCodeChallenge();
+    let realm = "";
+    try {
+      realm = this.getMyVaillantRealm();
+    } catch (error) {
+      this.log.error(`myVAILLANT realm configuration error: ${error.message}`);
+      return;
+    }
     let loginUrl = await this.requestClient({
       method: "GET",
       url:
-        "https://identity.vaillant-group.com/auth/realms/vaillant-" +
-        this.config.location +
-        "-b2c/protocol/openid-connect/auth?client_id=myvaillant&redirect_uri=enduservaillant.page.link%3A%2F%2Flogin&login_hint=" +
+        "https://identity.vaillant-group.com/auth/realms/" +
+        realm +
+        "/protocol/openid-connect/auth?client_id=myvaillant&redirect_uri=enduservaillant.page.link%3A%2F%2Flogin&login_hint=" +
         this.config.user +
         "&response_mode=fragment&response_type=code&scope=offline_access%20openid&code_challenge=" +
         codeChallenge +
         "&code_challenge_method=S256",
-      headers: this.myvHeader,
+      headers: this.buildMyVaillantHeaders(null, this.myvHeader),
     })
       .then((res) => {
-        this.log.debug(JSON.stringify(res.data));
+        this.log.debug(this.stringifyForLog(res.data));
         return res.data.split('action="')[1].split('"')[0];
       })
       .catch((error) => {
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
+        this.log.error(this.stringifyForLog(error));
+        error.response && this.log.error(this.stringifyForLog(error.response.data));
       });
     if (!loginUrl) {
       return;
@@ -270,19 +447,19 @@ class Vaillant extends utils.Adapter {
       data: qs.stringify({ username: this.config.user, password: this.config.password, credentialId: "" }),
     })
       .then((res) => {
-        this.log.debug(JSON.stringify(res.data));
+        this.log.debug(this.stringifyForLog(res.data));
         this.log.error("Login failed no code for myvLoginv2");
         this.log.error(res.data.split('polite">')[1].split("<")[0].trim());
       })
       .catch((error) => {
         if (error && error.message.includes("Unsupported protocol")) {
-          this.log.debug(JSON.stringify(error.message));
-          this.log.debug(JSON.stringify(error.request._options.href));
-          this.log.debug(JSON.stringify(error.request._options.hash));
+          this.log.debug(this.stringifyForLog(error.message));
+          this.log.debug(this.stringifyForLog(error.request._options.href));
+          this.log.debug(this.stringifyForLog(error.request._options.hash));
           return qs.parse(error.request._options.href.split("#")[1]);
         }
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
+        this.log.error(this.stringifyForLog(error));
+        error.response && this.log.error(this.stringifyForLog(error.response.data));
       });
     if (!response || !response.code) {
       return;
@@ -290,17 +467,11 @@ class Vaillant extends utils.Adapter {
     await this.requestClient({
       method: "post",
       maxBodyLength: Infinity,
-      url: "https://identity.vaillant-group.com/auth/realms/vaillant-" + this.config.location + "-b2c/protocol/openid-connect/token",
-      headers: {
+      url: "https://identity.vaillant-group.com/auth/realms/" + realm + "/protocol/openid-connect/token",
+      headers: this.buildMyVaillantHeaders(null, {
         Host: "identity.vaillant-group.com",
-        Accept: "application/json, text/plain, */*",
-        "x-app-identifier": "VAILLANT",
-        "Accept-Language": "de-de",
-        "x-client-locale": "de-DE",
-        "x-idm-identifier": "KEYCLOAK",
-        "User-Agent": "myVAILLANT/21469 CFNetwork/1410.1 Darwin/22.6.0",
         "Content-Type": "application/x-www-form-urlencoded",
-      },
+      }),
       data: qs.stringify({
         client_id: "myvaillant",
         grant_type: "authorization_code",
@@ -310,7 +481,7 @@ class Vaillant extends utils.Adapter {
       }),
     })
       .then((res) => {
-        this.log.debug(JSON.stringify(res.data));
+        this.log.debug(this.stringifyForLog(res.data));
         if (res.data.access_token) {
           this.log.info("Login successful");
           this.session = res.data;
@@ -318,11 +489,12 @@ class Vaillant extends utils.Adapter {
         }
       })
       .catch((error) => {
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
+        this.log.error(this.stringifyForLog(error));
+        error.response && this.log.error(this.stringifyForLog(error.response.data));
       });
   }
   async myvLogin() {
+    this.log.warn("Deprecated auth flow myvLogin() was called. Use myvLoginv2() Keycloak/PKCE flow only.");
     const [code_verifier, codeChallenge] = this.getCodeChallenge();
     const sessionToken = await this.requestClient({
       method: "post",
@@ -334,7 +506,7 @@ class Vaillant extends utils.Adapter {
       }),
     })
       .then((res) => {
-        this.log.debug(JSON.stringify(res.data));
+        this.log.debug(this.stringifyForLog(res.data));
         if (res.data.sessionToken) {
           return res.data.sessionToken;
         } else {
@@ -343,8 +515,8 @@ class Vaillant extends utils.Adapter {
         }
       })
       .catch((error) => {
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
+        this.log.error(this.stringifyForLog(error));
+        error.response && this.log.error(this.stringifyForLog(error.response.data));
       });
     if (!sessionToken) {
       return;
@@ -373,15 +545,15 @@ class Vaillant extends utils.Adapter {
       },
     })
       .then((res) => {
-        this.log.debug(JSON.stringify(res.data));
+        this.log.debug(this.stringifyForLog(res.data));
         this.log.error("Login failed no response code");
       })
       .catch((error) => {
         if (error && error.message.includes("Unsupported protocol")) {
           return qs.parse(error.request._options.path.split("?")[1]);
         }
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
+        this.log.error(this.stringifyForLog(error));
+        error.response && this.log.error(this.stringifyForLog(error.response.data));
       });
     if (!response || !response.code) {
       return;
@@ -404,7 +576,7 @@ class Vaillant extends utils.Adapter {
       }),
     })
       .then((res) => {
-        this.log.debug(JSON.stringify(res.data));
+        this.log.debug(this.stringifyForLog(res.data));
         if (res.data.access_token) {
           this.log.info("Login successful");
           this.session = res.data;
@@ -412,32 +584,22 @@ class Vaillant extends utils.Adapter {
         }
       })
       .catch((error) => {
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
+        this.log.error(this.stringifyForLog(error));
+        error.response && this.log.error(this.stringifyForLog(error.response.data));
       });
   }
 
   async getMyvDeviceList() {
-    await this.requestClient({
+    await this.myVaillantRequest({
       method: "get",
-      url: "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/homes",
-      headers: {
-        Authorization: "Bearer " + this.session.access_token,
-        "x-app-identifier": "VAILLANT",
-        "Accept-Language": "de-de",
-        Accept: "application/json, text/plain, */*",
-        "x-client-locale": "de-DE",
-        "x-idm-identifier": "KEYCLOAK",
-        "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-        "User-Agent": "myVAILLANT/21469 CFNetwork/1410.1 Darwin/22.6.0",
-      },
+      url: this.getHomesEndpoint(),
     })
       .then(async (res) => {
-        this.log.debug(JSON.stringify(res.data));
+        this.log.debug(this.stringifyForLog(res.data));
         if (res.data.length > 0) {
           this.log.info(`Found ${res.data.length} system`);
           for (const device of res.data) {
-            this.log.debug(JSON.stringify(device));
+            this.log.debug(this.stringifyForLog(device));
             const id = device.systemId;
             const remoteState = await this.getObjectAsync(id + ".systemControlState");
 
@@ -451,23 +613,13 @@ class Vaillant extends utils.Adapter {
             // }
 
             const name = device.homeName + " " + device.productInformation;
-            device.identifier = await this.requestClient({
+            device.identifier = await this.myVaillantRequest({
               method: "get",
-              url:
-                "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
-                id +
-                "/meta-info/control-identifier",
-              headers: {
-                Authorization: "Bearer " + this.session.access_token,
-              },
+              url: this.getControlIdentifierEndpoint(id),
             })
               .then((res) => {
-                this.log.debug(JSON.stringify(res.data));
+                this.log.debug(this.stringifyForLog(res.data));
                 return res.data.controlIdentifier;
-              })
-              .catch((error) => {
-                this.log.error(error);
-                error.response && this.log.error(JSON.stringify(error.response.data));
               });
             this.deviceArray.push(device);
             await this.extendObjectAsync(id, {
@@ -544,38 +696,25 @@ class Vaillant extends utils.Adapter {
         }
       })
       .catch((error) => {
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
+        this.log.debug(`getMyvDeviceList failed: ${error.message}`);
       });
   }
 
   async updateMyvDevices() {
     for (const device of this.deviceArray) {
-      let url = `https://api.vaillant-group.com/service-connected-control/${device.identifier}/v1/systems/${device.systemId}`;
-      if (device.identifier === "tli") {
-        url = `https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/${device.systemId}/${device.identifier}`;
-      }
+      const url = this.getSystemEndpoint(device.identifier, device.systemId);
 
-      const headers = {
-        Authorization: "Bearer " + this.session.access_token,
-        "x-app-identifier": "VAILLANT",
-        "Accept-Language": "de-de",
-        Accept: "application/json, text/plain, */*",
-        "x-client-locale": "de-DE",
-        "x-idm-identifier": "KEYCLOAK",
-        "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-        "User-Agent": "myVAILLANT/21469 CFNetwork/1410.1 Darwin/22.6.0",
-      };
+      const extraHeaders = {};
       if (this.etags[url]) {
-        headers["If-None-Match"] = this.etags[url];
+        extraHeaders["If-None-Match"] = this.etags[url];
       }
-      await this.requestClient({
+      await this.myVaillantRequest({
         method: "get",
         url: url,
-        headers: headers,
+        extraHeaders,
       })
         .then(async (res) => {
-          this.log.debug(JSON.stringify(res.data));
+          this.log.debug(this.stringifyForLog(res.data));
 
           const id = device.systemId;
           if (res.headers.etag) {
@@ -593,8 +732,7 @@ class Vaillant extends utils.Adapter {
             return;
           }
           this.log.error("Failed to get status for " + device.systemId);
-          this.log.error(error);
-          error.response && this.log.error(JSON.stringify(error.response.data));
+          this.log.debug(`updateMyvDevices failed: ${error.message}`);
         });
     }
   }
@@ -603,27 +741,18 @@ class Vaillant extends utils.Adapter {
       if (this.disabledRooms.includes(device.systemId)) {
         continue;
       }
-      const url = `https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/api/v1/ambisense/facilities/${device.systemId}/rooms`;
-      const headers = {
-        Authorization: "Bearer " + this.session.access_token,
-        "x-app-identifier": "VAILLANT",
-        "Accept-Language": "de-de",
-        Accept: "application/json, text/plain, */*",
-        "x-client-locale": "de-DE",
-        "x-idm-identifier": "KEYCLOAK",
-        "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-        "User-Agent": "myVAILLANT/21469 CFNetwork/1410.1 Darwin/22.6.0",
-      };
+      const url = this.getRoomsEndpoint(device.systemId);
+      const extraHeaders = {};
       if (this.etags[url]) {
-        headers["If-None-Match"] = this.etags[url];
+        extraHeaders["If-None-Match"] = this.etags[url];
       }
-      await this.requestClient({
+      await this.myVaillantRequest({
         method: "get",
         url: url,
-        headers: headers,
+        extraHeaders,
       })
         .then(async (res) => {
-          this.log.debug(JSON.stringify(res.data));
+          this.log.debug(this.stringifyForLog(res.data));
 
           const id = device.systemId + ".rooms";
           if (res.headers.etag) {
@@ -642,8 +771,7 @@ class Vaillant extends utils.Adapter {
           }
 
           this.log.error("Failed to get room status for " + device.systemId);
-          this.log.error(error);
-          error.response && this.log.error(JSON.stringify(error.response.data));
+          this.log.debug(`updateMyvRooms failed: ${error.message}`);
           this.log.info("Stop fetching of rooms until restart");
           this.disabledRooms.push(device.systemId);
         });
@@ -674,19 +802,9 @@ class Vaillant extends utils.Adapter {
   async updateMyStats() {
     for (const device of this.deviceArray) {
       const id = device.systemId;
-      await this.requestClient({
+      await this.myVaillantRequest({
         method: "get",
-        url: "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/emf/v2/" + id + "/currentSystem",
-        headers: {
-          Authorization: "Bearer " + this.session.access_token,
-          "x-app-identifier": "VAILLANT",
-          "Accept-Language": "de-de",
-          Accept: "application/json, text/plain, */*",
-          "x-client-locale": "de-DE",
-          "x-idm-identifier": "KEYCLOAK",
-          "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-          "User-Agent": "myVAILLANT/21469 CFNetwork/1410.1 Darwin/22.6.0",
-        },
+        url: this.getStatsEndpoint(id),
       })
         .then(async (res) => {
           await this.setObjectNotExistsAsync(id + ".stats", {
@@ -698,7 +816,7 @@ class Vaillant extends utils.Adapter {
           });
 
           this.json2iob.parse(id + ".stats", res.data, { forceIndex: true });
-          this.log.debug(JSON.stringify(res.data));
+          this.log.debug(this.stringifyForLog(res.data));
           const resolutions = ["DAY", "MONTH"];
 
           for (const deviceKey in res.data) {
@@ -725,33 +843,15 @@ class Vaillant extends utils.Adapter {
 
                 // startDate minus this.config.fetchReportsLimit days
 
-                await this.requestClient({
+                await this.myVaillantRequest({
                   method: "get",
-                  url:
-                    "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/emf/v2/" +
-                    id +
-                    "/devices/" +
-                    res.data[deviceKey].device_uuid +
-                    "/buckets?resolution=" +
-                    resolution +
-                    "&operationMode=" +
-                    stats.operation_mode +
-                    "&energyType=" +
-                    stats.value_type +
-                    "&startDate=" +
-                    fromDate +
-                    "&endDate=" +
-                    toDate,
-                  headers: {
-                    Authorization: "Bearer " + this.session.access_token,
-                    "x-app-identifier": "VAILLANT",
-                    "Accept-Language": "de-de",
-                    Accept: "application/json, text/plain, */*",
-                    "x-client-locale": "de-DE",
-                    "x-idm-identifier": "KEYCLOAK",
-                    "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-                    "User-Agent": "myVAILLANT/21469 CFNetwork/1410.1 Darwin/22.6.0",
-                  },
+                  url: this.getStatsBucketsEndpoint(id, res.data[deviceKey].device_uuid, {
+                    resolution,
+                    operationMode: stats.operation_mode,
+                    energyType: stats.value_type,
+                    startDate: fromDate,
+                    endDate: toDate,
+                  }),
                 })
                   .then(async (res) => {
                     // this.log.debug(JSON.stringify(res.data));
@@ -786,29 +886,35 @@ class Vaillant extends utils.Adapter {
                     }
                   })
                   .catch((error) => {
-                    this.log.error(error);
-                    error.response && this.log.error(JSON.stringify(error.response.data));
+                    this.log.debug(`updateMyStats buckets failed: ${error.message}`);
                   });
               }
             }
           }
         })
         .catch((error) => {
-          this.log.error(error);
-          error.response && this.log.error(JSON.stringify(error.response.data));
+          this.log.debug(`updateMyStats failed: ${error.message}`);
         });
     }
   }
   async refreshToken() {
+    let realm = "";
+    try {
+      realm = this.getMyVaillantRealm();
+    } catch (error) {
+      this.log.error(`myVAILLANT realm configuration error: ${error.message}`);
+      this.setStateAsync("info.connection", false, true);
+      return;
+    }
     await this.requestClient({
       method: "post",
-      url: "https://identity.vaillant-group.com/auth/realms/vaillant-" + this.config.location + "-b2c/protocol/openid-connect/token",
-      headers: {
+      url: "https://identity.vaillant-group.com/auth/realms/" + realm + "/protocol/openid-connect/token",
+      headers: this.buildMyVaillantHeaders(null, {
         accept: "*/*",
         "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
         "user-agent": "okta-react-native/2.7.0 okta-oidc-ios/3.11.2 react-native/>=0.70.1 ios/14.8",
         "accept-language": "de-de",
-      },
+      }),
       data: qs.stringify({
         refresh_token: this.session.refresh_token,
         client_id: "myvaillant",
@@ -816,14 +922,14 @@ class Vaillant extends utils.Adapter {
       }),
     })
       .then((res) => {
-        this.log.debug(JSON.stringify(res.data));
+        this.log.debug(this.stringifyForLog(res.data));
         this.session = res.data;
         this.log.debug("Refresh successful");
         this.setState("info.connection", true, true);
       })
       .catch(async (error) => {
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
+        this.log.error(this.stringifyForLog(error));
+        error.response && this.log.error(this.stringifyForLog(error.response.data));
         this.setStateAsync("info.connection", false, true);
       });
   }
@@ -891,6 +997,7 @@ class Vaillant extends utils.Adapter {
           url: "https://smart.vaillant.com/mobile/api/v4/account/authentication/v1/token/new",
           headers: this.baseHeader,
           followAllRedirects: true,
+          timeout: this.httpTimeoutMs,
           json: true,
           body: body,
           jar: this.jar,
@@ -901,15 +1008,15 @@ class Vaillant extends utils.Adapter {
 
           if (err || (resp && resp.statusCode >= 400) || !body) {
             this.log.error("Failed to login");
-            this.log.error(err);
-            this.log.error(JSON.stringify(body));
+            this.log.error(this.stringifyForLog(err));
+            this.log.error(this.stringifyForLog(body));
             resp && this.log.error(resp.statusCode);
             reject();
             return;
           }
-          this.log.debug(JSON.stringify(body));
+          this.log.debug(this.stringifyForLog(body));
           if (body.errorCode || !body.body.authToken) {
-            this.log.error(JSON.stringify(body));
+            this.log.error(this.stringifyForLog(body));
             reject();
             return;
           }
@@ -925,7 +1032,7 @@ class Vaillant extends utils.Adapter {
               4 * 60 * 60 * 1000,
             ); //4h;
           } catch (error) {
-            this.log.error(JSON.stringify(error));
+            this.log.error(this.stringifyForLog(error));
             error && this.log.error(JSON.stringify(error.stack));
             reject();
           }
@@ -944,6 +1051,7 @@ class Vaillant extends utils.Adapter {
         url: "https://smart.vaillant.com/mobile/api/v4/account/authentication/v1/authenticate",
         headers: this.baseHeader,
         followAllRedirects: true,
+        timeout: this.httpTimeoutMs,
         body: authBody,
         jar: this.jar,
         json: true,
@@ -953,14 +1061,14 @@ class Vaillant extends utils.Adapter {
         if (err || (resp && resp.statusCode >= 400)) {
           this.log.error("Authentication failed");
           this.setState("info.connection", false, true);
-          err && this.log.error(JSON.stringify(err));
+          err && this.log.error(this.stringifyForLog(err));
           resp && this.log.error(resp.statusCode);
-          body && this.log.error(JSON.stringify(body));
+          body && this.log.error(this.stringifyForLog(body));
           reject();
           return;
         }
         this.log.debug("Authentication successful");
-        this.log.debug(JSON.stringify(body));
+        this.log.debug(this.stringifyForLog(body));
         this.setState("info.connection", true, true);
         if (resolve) {
           resolve();
@@ -982,7 +1090,7 @@ class Vaillant extends utils.Adapter {
         try {
           await this.delObjectAsync(keyName.split(".").slice(2).join("."));
         } catch (error) {
-          this.log.debug(JSON.stringify(error));
+          this.log.debug(this.stringifyForLog(error));
         }
       }
     }
@@ -994,19 +1102,20 @@ class Vaillant extends utils.Adapter {
           url: "https://smart.vaillant.com/mobile/api/v4/facilities",
           headers: this.baseHeader,
           followAllRedirects: true,
+          timeout: this.httpTimeoutMs,
           json: true,
           jar: this.jar,
           gzip: true,
         },
         async (err, resp, body) => {
           if (err || (resp && resp.statusCode >= 400) || !body) {
-            this.log.error(err);
+            this.log.error(this.stringifyForLog(err));
             reject();
             return;
           }
-          this.log.debug(JSON.stringify(body));
+          this.log.debug(this.stringifyForLog(body));
           if (body.errorCode || !body.body.facilitiesList || body.body.facilitiesList.length === 0) {
-            this.log.error(JSON.stringify(body));
+            this.log.error(this.stringifyForLog(body));
             reject();
             return;
           }
@@ -1058,7 +1167,7 @@ class Vaillant extends utils.Adapter {
             });
             resolve();
           } catch (error) {
-            this.log.error(error);
+            this.log.error(this.stringifyForLog(error));
             this.log.error(error.stack);
             reject();
           }
@@ -1090,6 +1199,7 @@ class Vaillant extends utils.Adapter {
           url: url,
           headers: this.baseHeader,
           followAllRedirects: true,
+          timeout: this.httpTimeoutMs,
           json: true,
           jar: this.jar,
           gzip: true,
@@ -1099,7 +1209,7 @@ class Vaillant extends utils.Adapter {
             if (body.errorCode === "SPINE_NOT_SUPPORTED_BY_FACILITY") {
               this.isSpineActive = false;
             }
-            this.log.debug(JSON.stringify(body.errorCode));
+            this.log.debug(this.stringifyForLog(body.errorCode));
             reject();
             return;
           }
@@ -1107,11 +1217,12 @@ class Vaillant extends utils.Adapter {
             this.log.debug("Error response from: " + path);
             this.setState("info.connection", false, true);
             if ((resp && resp.statusCode === 401) || JSON.stringify(body) === "NOT_AUTHORIZED") {
-              this.log.info(JSON.stringify(body));
+              this.log.info(this.stringifyForLog(body));
               if (!this.isRelogin) {
                 this.log.info("401 Error try to relogin.");
                 this.isRelogin = true;
                 this.reloginTimeout && clearTimeout(this.reloginTimeout);
+                // TODO: Add bounded retry/backoff for relogin storms after repeated 401 responses.
                 this.reloginTimeout = setTimeout(() => {
                   this.log.debug("Start relogin");
                   this.login()
@@ -1126,16 +1237,16 @@ class Vaillant extends utils.Adapter {
                 this.log.info("Instance is already trying to relogin.");
               }
             } else {
-              err && this.log.error(err);
+              err && this.log.error(this.stringifyForLog(err));
               resp && this.log.error(resp && resp.statusCode);
-              body && this.log.error(JSON.stringify(body));
+              body && this.log.error(this.stringifyForLog(body));
               this.log.error("Failed to get:" + path);
             }
             reject();
             return;
           }
           this.log.debug(path + " successful");
-          this.log.debug(JSON.stringify(body));
+          this.log.debug(this.stringifyForLog(body));
           if (!body) {
             resolve();
             return;
@@ -1245,7 +1356,7 @@ class Vaillant extends utils.Adapter {
             });
             resolve();
           } catch (error) {
-            this.log.error(error);
+            this.log.error(this.stringifyForLog(error));
             this.log.error(error.stack);
             reject();
           }
@@ -1293,13 +1404,14 @@ class Vaillant extends utils.Adapter {
           body[action] = subBody;
         }
       }
-      this.log.debug(url);
-      this.log.debug(JSON.stringify(body));
+      this.log.debug(this.stringifyForLog(url));
+      this.log.debug(this.stringifyForLog(body));
       request.put(
         {
           url: url,
           headers: this.baseHeader,
           followAllRedirects: true,
+          timeout: this.httpTimeoutMs,
           body: body,
           json: true,
           gzip: true,
@@ -1307,18 +1419,18 @@ class Vaillant extends utils.Adapter {
         },
         (err, resp, body) => {
           if (err || (resp && resp.statusCode >= 400)) {
-            this.log.error(err);
-            this.log.error(JSON.stringify(body));
-            url && this.log.error(url);
-            body && this.log.error(JSON.stringify(body));
+            this.log.error(this.stringifyForLog(err));
+            this.log.error(this.stringifyForLog(body));
+            url && this.log.error(this.stringifyForLog(url));
+            body && this.log.error(this.stringifyForLog(body));
             reject();
             return;
           }
           try {
-            this.log.debug(JSON.stringify(body));
+            this.log.debug(this.stringifyForLog(body));
             resolve();
           } catch (error) {
-            this.log.error(JSON.stringify(error));
+            this.log.error(this.stringifyForLog(error));
             error && this.log.error(error.stack);
             reject();
           }
@@ -1332,6 +1444,69 @@ class Vaillant extends utils.Adapter {
       result += String.fromCharCode(key[i % key.length].charCodeAt(0) ^ value.charCodeAt(i));
     }
     return result;
+  }
+  sanitizeLogString(value) {
+    if (typeof value !== "string") {
+      return value;
+    }
+    let sanitized = value;
+    const keys = ["password", "access_token", "refresh_token", "id_token", "authorization", "token", "code", "session_state"];
+    for (const key of keys) {
+      const queryRegex = new RegExp(`(${key}=)([^&\\s]+)`, "gi");
+      sanitized = sanitized.replace(queryRegex, "$1[REDACTED]");
+      const jsonRegex = new RegExp(`("${key}"\\s*:\\s*")([^"]+)(")`, "gi");
+      sanitized = sanitized.replace(jsonRegex, "$1[REDACTED]$3");
+    }
+    sanitized = sanitized.replace(/(Bearer\s+)([A-Za-z0-9\-._~+/=]+)/gi, "$1[REDACTED]");
+    return sanitized;
+  }
+  sanitizeLogData(value, keyName = "") {
+    const sensitiveKeys = new Set([
+      "password",
+      "access_token",
+      "refresh_token",
+      "id_token",
+      "authorization",
+      "token",
+      "code",
+      "session_state",
+    ]);
+    if (value === null || value === undefined) {
+      return value;
+    }
+    if (typeof value === "string") {
+      return this.sanitizeLogString(value);
+    }
+    if (typeof value !== "object") {
+      if (sensitiveKeys.has(String(keyName).toLowerCase())) {
+        return "[REDACTED]";
+      }
+      return value;
+    }
+    if (Array.isArray(value)) {
+      return value.map((item) => this.sanitizeLogData(item));
+    }
+    const sanitized = {};
+    Object.keys(value).forEach((key) => {
+      const normalizedKey = key.toLowerCase();
+      if (sensitiveKeys.has(normalizedKey) || normalizedKey.includes("token") || normalizedKey === "code") {
+        sanitized[key] = "[REDACTED]";
+      } else {
+        sanitized[key] = this.sanitizeLogData(value[key], key);
+      }
+    });
+    return sanitized;
+  }
+  stringifyForLog(value) {
+    const sanitized = this.sanitizeLogData(value);
+    if (typeof sanitized === "string") {
+      return sanitized;
+    }
+    try {
+      return JSON.stringify(sanitized);
+    } catch (error) {
+      return String(sanitized);
+    }
   }
   makeid(length = 202) {
     let result = "";
@@ -1441,25 +1616,11 @@ class Vaillant extends utils.Adapter {
 
           if (command === "awayMode") {
             method = state.val ? "POST" : "DELETE";
-            url = "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" + deviceId + "/tli/away-mode";
-            if (identifier !== "tli") {
-              url = "https://api.vaillant-group.com/service-connected-control/" + identifier + "/v1/systems/" + deviceId + "/away-mode";
-            }
+            url = this.buildSystemCommandEndpoint(identifier, deviceId, "away-mode", true);
           }
           if (command === "boost") {
             method = state.val ? "POST" : "DELETE";
-            url =
-              "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
-              deviceId +
-              "/tli/domestic-hot-water/255/boost";
-            if (identifier !== "tli") {
-              url =
-                "https://api.vaillant-group.com/service-connected-control/" +
-                identifier +
-                "/v1/systems/" +
-                deviceId +
-                "/domestic-hot-water/255/boost";
-            }
+            url = this.buildSystemCommandEndpoint(identifier, deviceId, "domestic-hot-water/255/boost", true);
           }
           if (command === "quickVeto") {
             method = state.val ? "POST" : "DELETE";
@@ -1469,18 +1630,7 @@ class Vaillant extends utils.Adapter {
               duration = durationState.val;
             }
             data = { desiredRoomTemperatureSetpoint: state.val, duration: duration };
-            url =
-              "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
-              deviceId +
-              "/tli/zones/0/quick-veto";
-            if (identifier !== "tli") {
-              url =
-                "https://api.vaillant-group.com/service-connected-control/" +
-                identifier +
-                "/v1/systems/" +
-                deviceId +
-                "/zones/0/quick-veto";
-            }
+            url = this.buildSystemCommandEndpoint(identifier, deviceId, "zones/0/quick-veto", true);
           }
           const commands = {
             operationModeHeating: { url: "heating/operation-mode", parameter: "operationMode" },
@@ -1506,42 +1656,10 @@ class Vaillant extends utils.Adapter {
               }
             }
             const urlPostfix = commands[command] ? commands[command].url : command;
-            url =
-              "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
-              deviceId +
-              "/tli/zones/" +
-              zoneId +
-              "/" +
-              urlPostfix;
-            if (identifier !== "tli") {
-              url =
-                "https://api.vaillant-group.com/service-connected-control/" +
-                identifier +
-                "/v1/systems/" +
-                deviceId +
-                "/zones/" +
-                zoneId +
-                "/" +
-                urlPostfix;
-            }
+            url = this.buildSystemCommandEndpoint(identifier, deviceId, `zones/${zoneId}/${urlPostfix}`, true);
 
             if (command === "desiredRoomTemperatureSetpoint") {
-              url =
-                "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
-                deviceId +
-                "/tli/zones/" +
-                zoneId +
-                "/quickVeto";
-              if (identifier !== "tli") {
-                url =
-                  "https://api.vaillant-group.com/service-connected-control/" +
-                  identifier +
-                  "/v1/systems/" +
-                  deviceId +
-                  "/zones/" +
-                  zoneId +
-                  "/quickVeto";
-              }
+              url = this.buildSystemCommandEndpoint(identifier, deviceId, `zones/${zoneId}/quickVeto`, true);
             }
           }
           if (id.split(".")[4].includes("circuits")) {
@@ -1550,22 +1668,7 @@ class Vaillant extends utils.Adapter {
             this.log.debug("deviceId: " + deviceId);
             method = "PATCH";
             data[command] = state.val;
-            url =
-              "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
-              deviceId +
-              "/tli/circuits/" +
-              circuitsId +
-              "/quickVeto";
-            if (identifier !== "tli") {
-              url =
-                "https://api.vaillant-group.com/service-connected-control/" +
-                identifier +
-                "/v1/systems/" +
-                deviceId +
-                "/circuits/" +
-                circuitsId +
-                "/quickVeto";
-            }
+            url = this.buildSystemCommandEndpoint(identifier, deviceId, `circuits/${circuitsId}/quickVeto`, true);
           }
           if (id.split(".")[4].includes("domesticHotWater")) {
             const idArray = id.split(".");
@@ -1576,44 +1679,12 @@ class Vaillant extends utils.Adapter {
             this.log.debug("deviceId: " + deviceId);
             method = state.val ? "POST" : "DELETE";
             data = {};
-            url =
-              "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
-              deviceId +
-              "/domesticHotWater/" +
-              index.val +
-              "/" +
-              command;
-            if (identifier !== "tli") {
-              url =
-                "https://api.vaillant-group.com/service-connected-control/" +
-                identifier +
-                "/v1/systems/" +
-                deviceId +
-                "/domesticHotWater/" +
-                index.val +
-                "/" +
-                command;
-            }
+            url = this.buildSystemCommandEndpoint(identifier, deviceId, `domesticHotWater/${index.val}/${command}`, false);
             if (command === "setPoint") {
               data = {
                 setPoint: state.val,
               };
-              url =
-                "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
-                deviceId +
-                "/domesticHotWater/" +
-                index.val +
-                "/temperature";
-              if (identifier !== "tli") {
-                url =
-                  "https://api.vaillant-group.com/service-connected-control/" +
-                  identifier +
-                  "/v1/systems/" +
-                  deviceId +
-                  "/domesticHotWater/" +
-                  index.val +
-                  "/temperature";
-              }
+              url = this.buildSystemCommandEndpoint(identifier, deviceId, `domesticHotWater/${index.val}/temperature`, false);
             }
             if (command === "operationMode") {
               data = {
@@ -1630,7 +1701,7 @@ class Vaillant extends utils.Adapter {
               data[command] = state.val;
               //replace uppercase with lowercase and add - between
               const urlCommand = command.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
-              url = `https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/api/v1/ambisense/facilities/${deviceId}/rooms/${roomIndex.val}/configuration/${urlCommand}`;
+              url = this.getRoomConfigurationEndpoint(deviceId, roomIndex.val, urlCommand);
             }
           }
           if (command === "customCommand") {
@@ -1640,52 +1711,31 @@ class Vaillant extends utils.Adapter {
               if (parsedCommand.method) {
                 method = parsedCommand.method;
               }
-              url =
-                "https://api.vaillant-group.com/service-connected-control/end-user-app-api/v1/systems/" +
-                deviceId +
-                "/tli/" +
-                parsedCommand.url;
-              if (identifier !== "tli") {
-                url =
-                  "https://api.vaillant-group.com/service-connected-control/" +
-                  identifier +
-                  "/v1/systems/" +
-                  deviceId +
-                  "/" +
-                  parsedCommand.url;
-              }
+              url = this.buildSystemCommandEndpoint(identifier, deviceId, parsedCommand.url, true);
               data = parsedCommand.data;
             } catch (error) {
               this.log.error("Failed to parse custom command");
-              this.log.error(error);
+              this.log.error(this.stringifyForLog(error));
             }
           }
-          this.log.debug(url);
-          this.log.debug(JSON.stringify(data));
+          this.log.debug(this.stringifyForLog(url));
+          this.log.debug(this.stringifyForLog(data));
           if (!url) {
             this.log.error("No configuration supported please use customCommand");
             return;
           }
-          await this.requestClient({
+          await this.myVaillantRequest({
             method: method,
             url: url,
-            headers: {
-              Accept: "application/json, text/plain, */*",
-              Authorization: "Bearer " + this.session.access_token,
-
-              "x-app-identifier": "VAILLANT",
-              "Accept-Language": "de-de",
+            extraHeaders: {
               "Content-Type": "application/json",
-              "x-client-locale": "de-DE",
-              "x-idm-identifier": "OKTA",
-              "ocp-apim-subscription-key": "1e0a2f3511fb4c5bbb1c7f9fedd20b1c",
-              "User-Agent": "myVAILLANT/11835 CFNetwork/1240.0.4 Darwin/20.6.0",
               Connection: "keep-alive",
+              "User-Agent": "myVAILLANT/11835 CFNetwork/1240.0.4 Darwin/20.6.0",
             },
             data: JSON.stringify(data),
           })
             .then(async (res) => {
-              this.log.info(JSON.stringify(res.data));
+              this.log.info(this.stringifyForLog(res.data));
               this.refreshTimeout = setTimeout(async () => {
                 this.log.info("Update devices");
                 await this.updateMyvDevices();
@@ -1693,8 +1743,7 @@ class Vaillant extends utils.Adapter {
               }, 10 * 1000);
             })
             .catch((error) => {
-              this.log.error(error);
-              error.response && this.log.error(JSON.stringify(error.response.data));
+              this.log.debug(`onStateChange myV request failed: ${error.message}`);
             });
           return;
         }
