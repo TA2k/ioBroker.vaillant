@@ -153,7 +153,10 @@
       "VR900",
       "VR920"
     ],
-    "license": "MIT",
+    "licenseInformation": {
+      "type": "free",
+      "license": "MIT"
+    },
     "platform": "Javascript/Node.js",
     "main": "main.js",
     "icon": "vaillant.png",
