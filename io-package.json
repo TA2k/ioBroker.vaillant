@@ -166,12 +166,14 @@
     "connectionType": "cloud",
     "dataSource": "poll",
     "compact": true,
-    "materialize": true,
     "dependencies": [
       {
-        "js-controller": ">=1.4.2"
+        "js-controller": ">=6.0.11"
       }
-    ]
+    ],
+    "adminUI": {
+      "config": "materialize"
+    }
   },
   "native": {
     "user": "",
