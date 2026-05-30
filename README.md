@@ -253,6 +253,10 @@ zone/2/xxxx
 ## Changelog
 
 <!-- ### **WORK IN PROGRESS** -->
+
+### **WORK IN PROGRESS**
+- (ioBroker-Bot) Adapter requires js-controller >= 6.0.11 now.
+
 ### 0.7.5 (2025-07-09)
  - revert change to fix save issue
 
